@@ -10,7 +10,7 @@ import pathlib
 import pyplugs
 
 # PyConfs imports
-from pyconfs._exceptions import UnknownFormat
+from pyconfs.exceptions import UnknownFormat
 
 names = pyplugs.names_factory(__package__)
 read = pyplugs.call_factory(__package__)

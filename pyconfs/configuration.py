@@ -13,7 +13,7 @@ from datetime import date, datetime
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 # PyConfs imports
-from pyconfs import _exceptions, readers
+from pyconfs import exceptions, readers
 
 _BOOLEAN_STATES = {
     "0": False,
@@ -98,7 +98,7 @@ class Configuration(UserDict):
         """Get single value, raise an error if key points to a Configuration object"""
         value = self.data[key]
         if isinstance(value, self.__class__):
-            raise _exceptions.EntryError(f"{self.name}.{key!r} is a Configuration")
+            raise exceptions.EntryError(f"{self.name}.{key!r} is a Configuration")
 
         return value
 
@@ -123,7 +123,7 @@ class Configuration(UserDict):
         try:
             return _BOOLEAN_STATES[value]
         except KeyError:
-            raise _exceptions.ConversionError(
+            raise exceptions.ConversionError(
                 f"Value {key} = {value!r} can not be converted to boolean"
             ) from None
 
