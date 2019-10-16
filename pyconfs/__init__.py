@@ -12,8 +12,7 @@ Current maintainers:
 from collections import namedtuple as _namedtuple
 from datetime import date as _date
 
-# from pyconfs._exceptions import *  # noqa
-# from pyconfs._plugins import *  # noqa
+from pyconfs._configuration import Configuration  # noqa
 
 # Version of PyConfs
 #
