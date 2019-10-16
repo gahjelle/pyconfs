@@ -6,12 +6,25 @@ be grouped inside nested Configurations as well.
 
 # Standard library imports
 import pathlib
+import re
 import textwrap
 from collections import UserDict
-from typing import Any, Dict, List, Optional, Union
+from datetime import date, datetime
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 # PyConfs imports
-from pyconfs import readers
+from pyconfs import _exceptions, readers
+
+_BOOLEAN_STATES = {
+    "0": False,
+    "1": True,
+    "false": False,
+    "true": True,
+    "no": False,
+    "yes": True,
+    "off": False,
+    "on": True,
+}
 
 
 class Configuration(UserDict):
@@ -49,7 +62,7 @@ class Configuration(UserDict):
         if isinstance(value, dict):
             self.data[key] = self.from_dict(value, name=key)
         else:
-            self.data[key] = value  # ConfigurationEntry(key=key, value=value)
+            self.data[key] = value
 
     def update_from_dict(self, entries: Dict[str, Any]) -> None:
         """Update the configuration from a dictionary"""
@@ -77,6 +90,113 @@ class Configuration(UserDict):
             else:
                 lines.append(f"{key:<{key_width}}= {value!r}")
         return "\n".join(lines)
+
+    #
+    # Converters used to convert entries to certain types
+    #
+    def _get_value(self, key: str) -> Any:
+        """Get single value, raise an error if key points to a Configuration object"""
+        value = self.data[key]
+        if isinstance(value, self.__class__):
+            raise _exceptions.EntryError(f"{self.name}.{key!r} is a Configuration")
+
+        return value
+
+    def to_str(self, key: str) -> str:
+        """Convert entry to a string"""
+        value = self._get_value(key)
+        return str(value)
+
+    def to_int(self, key: str) -> int:
+        """Convert entry to an integer number"""
+        value = self._get_value(key)
+        return int(value)
+
+    def to_float(self, key: str) -> float:
+        """Convert entry to a floating point number"""
+        value = self._get_value(key)
+        return float(value)
+
+    def to_bool(self, key: str) -> bool:
+        """Convert entry to a boolean"""
+        value = self.to_str(key).lower()
+        try:
+            return _BOOLEAN_STATES[value]
+        except KeyError:
+            raise _exceptions.ConversionError(
+                f"Value {key} = {value!r} can not be converted to boolean"
+            ) from None
+
+    def to_date(self, key: str, format="%Y-%m-%d") -> date:
+        """Convert entry to a date"""
+        value = self._get_value(key)
+        return int(value)
+
+    def to_datetime(self, key: str, format="%Y-%m-%d %H:%M:%S") -> datetime:
+        """Convert entry to a datetime"""
+        value = self._get_value(key)
+        return int(value)
+
+    def to_path(self, key: str) -> pathlib.Path:
+        """Convert entry to a path"""
+        value = self._get_value(key)
+        return pathlib.Path(value)
+
+    def to_list(
+        self,
+        key: str,
+        split_re: str = r"[\s,]+",
+        converter: Callable[[str], Any] = str,
+        max_split: int = 0,
+    ) -> List[Any]:
+        """Convert entry to a list"""
+        value = self.to_str(key)
+        return [
+            converter(s) for s in re.split(split_re, value, maxsplit=max_split) if s
+        ]
+
+    def to_dict(
+        self,
+        key: str,
+        item_split_re: str = r",\n?",
+        key_value_split_re: str = r"[:]",
+        converter: Callable[[str], Any] = str.strip,
+        max_split: int = 0,
+    ) -> Dict[str, Any]:
+        """Convert entry to a dictionary"""
+        value = self.to_str(key)
+        items = [
+            re.split(key_value_split_re, s, maxsplit=1)
+            for s in re.split(item_split_re, value, maxsplit=max_split)
+            if s
+        ]
+        return {k: converter(v) for k, v in items}
+
+    def to_set(
+        self,
+        key: str,
+        split_re: str = r"[\s,]+",
+        converter: Callable[[str], Any] = str,
+        max_split: int = 0,
+    ) -> Set[Any]:
+        """Convert entry to a set"""
+        value = self.to_str(key)
+        return {
+            converter(s) for s in re.split(split_re, value, maxsplit=max_split) if s
+        }
+
+    def to_tuple(
+        self,
+        key: str,
+        split_re: str = r"[\s,]+",
+        converter: Callable[[str], Any] = str,
+        max_split: int = 0,
+    ) -> Tuple[Any, ...]:
+        """Convert entry to a tuple"""
+        value = self.to_str(key)
+        return tuple(
+            converter(s) for s in re.split(split_re, value, maxsplit=max_split) if s
+        )
 
     def __dir__(self) -> List[str]:
         """Add sections and entries to list of attributes"""
