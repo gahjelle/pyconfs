@@ -7,10 +7,11 @@ be grouped inside nested Configurations as well.
 # Standard library imports
 import functools
 import pathlib
+import re
 import textwrap
 from collections import UserDict
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 # PyConfs imports
 from pyconfs import converters, exceptions, readers
@@ -30,10 +31,13 @@ def _dispatch_to(converter):
 
 
 class Configuration(UserDict):
-    def __init__(self, name: str = None) -> None:
+    def __init__(
+        self, name: Optional[str] = None, _vars: Optional[Dict[str, str]] = None
+    ) -> None:
         """Create an empty configuration"""
         super().__init__()
         self.name = "pyconfs.Configuration" if name is None else name
+        self.vars = {} if _vars is None else _vars
 
     @classmethod
     def from_dict(
@@ -62,7 +66,8 @@ class Configuration(UserDict):
     def update_entry(self, key: str, value: Any) -> None:
         """Update one entry in configuration"""
         if isinstance(value, dict):
-            self.data[key] = self.from_dict(value, name=key)
+            self.data.setdefault(key, self.__class__(name=key, _vars=self.vars))
+            self.data[key].update_from_dict(value)
         else:
             self.data[key] = value
 
@@ -81,6 +86,67 @@ class Configuration(UserDict):
         )
         entries = readers.read(file_format, file_path=file_path)
         self.update_from_dict(entries)
+
+    @property
+    def sections(self) -> List["Configuration"]:
+        """List of sections in Configuration
+
+        Only actual sections are included, not top level entries.
+        """
+        return [s for s in self.data.values() if isinstance(s, self.__class__)]
+
+    @property
+    def section_names(self) -> List[str]:
+        """List names of sections in Configuration
+
+        Only actual sections are included, not top level entries.
+        """
+        return [n for n, s in self.data.items() if isinstance(s, self.__class__)]
+
+    @property
+    def entries(self) -> List[Tuple[str, Any]]:
+        """List of key, value entries in Configuration
+
+        Only actual entries are included, not subsections.
+        """
+        return [
+            (k, v) for k, v in self.data.items() if not isinstance(v, self.__class__)
+        ]
+
+    @property
+    def entry_values(self) -> List[Any]:
+        """List of values in Configuration
+
+        Only actual values are included, not subsections.
+        """
+        return [v for v in self.data.values() if not isinstance(v, self.__class__)]
+
+    @property
+    def entry_keys(self) -> List[str]:
+        """List of keys in Configuration
+
+        Only actual keys are included, not subsections.
+        """
+        return [k for k, v in self.data.items() if not isinstance(v, self.__class__)]
+
+    def replace(
+        self,
+        key: str,
+        *,
+        converter: Optional[Callable[[str], Any]] = None,
+        default: Optional[str] = None,
+        **replace_vars: str,
+    ) -> Any:
+        """Replace values in an entry based on {} format strings"""
+        all_vars = {**self.vars, **replace_vars}
+        replaced = _replace(self.data[key], replace_vars=all_vars, default=default)
+        if converter is not None:
+            if isinstance(converter, str):
+                replaced = converters.convert(f"to_{converter}", value=replaced)
+            else:
+                replaced = converter(replaced)
+
+        return replaced
 
     def as_str(self, indent: int = 4, key_width: int = 30) -> str:
         """Represent Configuration as a string"""
@@ -176,3 +242,42 @@ class Configuration(UserDict):
     def __str__(self):
         """Full representation of a Configuration"""
         return self.as_str()
+
+
+def _replace(
+    string: str, replace_vars: Dict[str, str], default: Optional[str] = None
+) -> str:
+    """Replace format style variables in a string
+
+    Handles nested replacements by first replacing the replace_vars. Format
+    specifiers (after colon, :) are allowed, but can not contain nested format
+    strings.
+
+    This function is used instead of str.format for three reasons. It handles:
+    - that not all pairs of {...} are replaced at once
+    - optional default values for variables that are not specified
+    - nested replacements where values of replace_vars may be replaced themselves
+
+    Credit: Originally written for `midgard.config.Configuration`
+
+    Args:
+        string:        Original string
+        replace_vars:  Variables that can be replaced
+        default:       Optional default value used for vars not in replace_vars.
+    """
+    matches = re.finditer(r"\{(\w+)(:[^\{\}]*)?\}", string)
+    for match in matches:
+        var = match.group(1)
+        var_expr = match.string[slice(*match.span())]
+        replacement = replace_vars.get(var)
+        if replacement is None:
+            # Default replacements
+            replacement = var_expr if default is None else default
+        else:
+            # Nested replacements
+            replacement = _replace(replacement, replace_vars, default)
+
+        # Use str.format to handle format specifiers
+        string = string.replace(var_expr, var_expr.format(**{var: replacement}))
+
+    return string
