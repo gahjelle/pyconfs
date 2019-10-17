@@ -6,7 +6,7 @@
 # Standard library imports
 import pathlib
 
-# Third party plugins
+# Third party imports
 import pyplugs
 
 # PyConfs imports
