@@ -5,26 +5,28 @@ be grouped inside nested Configurations as well.
 """
 
 # Standard library imports
+import functools
 import pathlib
-import re
 import textwrap
 from collections import UserDict
 from datetime import date, datetime
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 # PyConfs imports
-from pyconfs import exceptions, readers
+from pyconfs import converters, exceptions, readers
 
-_BOOLEAN_STATES = {
-    "0": False,
-    "1": True,
-    "false": False,
-    "true": True,
-    "no": False,
-    "yes": True,
-    "off": False,
-    "on": True,
-}
+
+def _dispatch_to(converter):
+    """Decorator for dispatching methods to converter functions"""
+
+    def _decorator_dispatch_to(func):
+        @functools.wraps(func)
+        def _wrapper_dispatch_to(self, key: str, **options):
+            return converter(value=func(self, key), **options)
+
+        return _wrapper_dispatch_to
+
+    return _decorator_dispatch_to
 
 
 class Configuration(UserDict):
@@ -92,7 +94,7 @@ class Configuration(UserDict):
         return "\n".join(lines)
 
     #
-    # Converters used to convert entries to certain types
+    # Add converters used to convert entries to certain types
     #
     def _get_value(self, key: str) -> Any:
         """Get single value, raise an error if key points to a Configuration object"""
@@ -102,102 +104,64 @@ class Configuration(UserDict):
 
         return value
 
+    @_dispatch_to(converters.to_str)
     def to_str(self, key: str) -> str:
-        """Convert entry to a string"""
-        value = self._get_value(key)
-        return str(value)
+        """Convert entry to string"""
+        return self._get_value(key)
 
+    @_dispatch_to(converters.to_int)
     def to_int(self, key: str) -> int:
-        """Convert entry to an integer number"""
-        value = self._get_value(key)
-        return int(value)
+        """Convert entry to integer number"""
+        return self._get_value(key)
 
+    @_dispatch_to(converters.to_float)
     def to_float(self, key: str) -> float:
         """Convert entry to a floating point number"""
-        value = self._get_value(key)
-        return float(value)
+        return self._get_value(key)
 
+    @_dispatch_to(converters.to_bool)
     def to_bool(self, key: str) -> bool:
         """Convert entry to a boolean"""
-        value = self.to_str(key).lower()
-        try:
-            return _BOOLEAN_STATES[value]
-        except KeyError:
-            raise exceptions.ConversionError(
-                f"Value {key} = {value!r} can not be converted to boolean"
-            ) from None
+        return self._get_value(key)
 
-    def to_date(self, key: str, format="%Y-%m-%d") -> date:
+    @_dispatch_to(converters.to_date)
+    def to_date(self, key: str) -> date:
         """Convert entry to a date"""
-        value = self._get_value(key)
-        return int(value)
+        return self._get_value(key)
 
-    def to_datetime(self, key: str, format="%Y-%m-%d %H:%M:%S") -> datetime:
+    @_dispatch_to(converters.to_datetime)
+    def to_datetime(self, key: str) -> datetime:
         """Convert entry to a datetime"""
-        value = self._get_value(key)
-        return int(value)
+        return self._get_value(key)
 
+    @_dispatch_to(converters.to_path)
     def to_path(self, key: str) -> pathlib.Path:
         """Convert entry to a path"""
-        value = self._get_value(key)
-        return pathlib.Path(value)
+        return self._get_value(key)
 
-    def to_list(
-        self,
-        key: str,
-        split_re: str = r"[\s,]+",
-        converter: Callable[[str], Any] = str,
-        max_split: int = 0,
-    ) -> List[Any]:
+    @_dispatch_to(converters.to_list)
+    def to_list(self, key: str) -> List[Any]:
         """Convert entry to a list"""
-        value = self.to_str(key)
-        return [
-            converter(s) for s in re.split(split_re, value, maxsplit=max_split) if s
-        ]
+        return self._get_value(key)
 
-    def to_dict(
-        self,
-        key: str,
-        item_split_re: str = r",\n?",
-        key_value_split_re: str = r"[:]",
-        converter: Callable[[str], Any] = str.strip,
-        max_split: int = 0,
-    ) -> Dict[str, Any]:
+    @_dispatch_to(converters.to_dict)
+    def to_dict(self, key: str) -> Dict[str, Any]:
         """Convert entry to a dictionary"""
-        value = self.to_str(key)
-        items = [
-            re.split(key_value_split_re, s, maxsplit=1)
-            for s in re.split(item_split_re, value, maxsplit=max_split)
-            if s
-        ]
-        return {k: converter(v) for k, v in items}
+        return self._get_value(key)
 
-    def to_set(
-        self,
-        key: str,
-        split_re: str = r"[\s,]+",
-        converter: Callable[[str], Any] = str,
-        max_split: int = 0,
-    ) -> Set[Any]:
+    @_dispatch_to(converters.to_set)
+    def to_set(self, key: str) -> Set[Any]:
         """Convert entry to a set"""
-        value = self.to_str(key)
-        return {
-            converter(s) for s in re.split(split_re, value, maxsplit=max_split) if s
-        }
+        return self._get_value(key)
 
-    def to_tuple(
-        self,
-        key: str,
-        split_re: str = r"[\s,]+",
-        converter: Callable[[str], Any] = str,
-        max_split: int = 0,
-    ) -> Tuple[Any, ...]:
+    @_dispatch_to(converters.to_tuple)
+    def to_tuple(self, key: str, **options: Any) -> Tuple[Any, ...]:
         """Convert entry to a tuple"""
-        value = self.to_str(key)
-        return tuple(
-            converter(s) for s in re.split(split_re, value, maxsplit=max_split) if s
-        )
+        return self._get_value(key)
 
+    #
+    # Dunder methods
+    #
     def __dir__(self) -> List[str]:
         """Add sections and entries to list of attributes"""
         return list(super().__dir__()) + list(self.data.keys())
