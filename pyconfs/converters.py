@@ -5,6 +5,7 @@
 
 # Standard library imports
 import functools
+import os.path
 import pathlib
 import re
 from datetime import date, datetime
@@ -80,6 +81,10 @@ def to_datetime(value: str, format="%Y-%m-%d %H:%M:%S") -> datetime:
 @pyplugs.register
 def to_path(value: str) -> pathlib.Path:
     """Convert value to a path"""
+    # Handle ~ shortcut for home directories
+    if "~" in value:
+        value = os.path.expanduser(value)
+
     return pathlib.Path(value)
 
 
