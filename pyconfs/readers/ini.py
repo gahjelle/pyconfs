@@ -60,6 +60,8 @@ def _convert_types(entries):
         entries[master] = converters.convert(f"to_{value}", value=entries[master])
         del entries[key]
 
+    return entries
+
 
 @pyplugs.register
 def is_format(file_path: pathlib.Path) -> bool:
