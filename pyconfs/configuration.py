@@ -38,6 +38,7 @@ class Configuration(UserDict):
         super().__init__()
         self.name = "pyconfs.Configuration" if name is None else name
         self.vars = {} if _vars is None else _vars
+        self._source = {}
 
     @classmethod
     def from_dict(
@@ -63,29 +64,30 @@ class Configuration(UserDict):
         cfg.update_from_file(file_path=file_path, file_format=file_format)
         return cfg
 
-    def update_entry(self, key: str, value: Any) -> None:
+    def update_entry(self, key: str, value: Any, source: str = "") -> None:
         """Update one entry in configuration"""
         if isinstance(value, dict):
             self.data.setdefault(key, self.__class__(name=key, _vars=self.vars))
-            self.data[key].update_from_dict(value)
+            self.data[key].update_from_dict(value, source=source)
         else:
             self.data[key] = value
+            self._source[key] = source
 
-    def update_from_dict(self, entries: Dict[str, Any]) -> None:
+    def update_from_dict(self, entries: Dict[str, Any], source: str = "") -> None:
         """Update the configuration from a dictionary"""
         for key, value in entries.items():
-            self.update_entry(key=key, value=value)
+            self.update_entry(key=key, value=value, source=source)
 
     def update_from_file(
         self, file_path: Union[str, pathlib.Path], file_format: Optional[str] = None
     ) -> None:
         """Update the configuration from a file"""
-        file_path = pathlib.Path(file_path)
+        file_path = pathlib.Path(file_path).resolve()
         file_format = (
             readers.guess_format(file_path) if file_format is None else file_format
         )
         entries = readers.read(file_format, file_path=file_path)
-        self.update_from_dict(entries)
+        self.update_from_dict(entries, source=f"{file_path} ({file_format} reader)")
 
     @property
     def sections(self) -> List["Configuration"]:
@@ -128,6 +130,24 @@ class Configuration(UserDict):
         Only actual keys are included, not subsections.
         """
         return [k for k, v in self.data.items() if not isinstance(v, self.__class__)]
+
+    @property
+    def sources(self):
+        """List sources in configuration"""
+        src = set(self._source.values())
+        for section in self.sections:
+            src |= section.sources
+
+        return src
+
+    def source(self, key):
+        """List source for the given key"""
+        if key in self.entry_keys:
+            return self._source[key]
+        elif key in self.section_names:
+            return self[key].sources
+        else:
+            raise KeyError(f"Unknown entry {key!r}")
 
     def replace(
         self,
