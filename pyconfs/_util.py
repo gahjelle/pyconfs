@@ -10,7 +10,7 @@ import sys
 class FuturePackage:
     """Represents a package that will be imported in the future"""
 
-    _pip_names = {"pytomls": "pytoml"}
+    _pip_names = {"toml": "toml", "yaml": "PyYAML"}
 
     def __init__(self, package_name: str) -> None:
         self._package_name = package_name
