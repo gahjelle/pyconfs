@@ -12,7 +12,7 @@ from typing import Any, Dict
 import pyplugs
 
 # PyConfs imports
-from pyconfs import converters
+from pyconfs import _converters
 
 _SUFFIXES = {".ini", ".conf"}
 _TYPE_SUFFIX = ":type"
@@ -57,7 +57,7 @@ def _convert_types(entries):
             continue
 
         # Convert entry to the given type
-        entries[master] = converters.convert(f"to_{value}", value=entries[master])
+        entries[master] = _converters.convert(f"to_{value}", value=entries[master])
         del entries[key]
 
     return entries

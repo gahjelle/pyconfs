@@ -15,7 +15,7 @@ from typing import Any, Callable, Dict, List, Set, Tuple
 import pyplugs
 
 # PyConfs imports
-from pyconfs import exceptions
+from pyconfs import _exceptions
 
 # Set up pyplugs plugins
 package, _, plugin = __name__.rpartition(".")
@@ -61,7 +61,7 @@ def to_bool(value: str) -> bool:
     try:
         return _BOOLEAN_STATES[str(value).lower()]
     except KeyError:
-        raise exceptions.ConversionError(
+        raise _exceptions.ConversionError(
             f"Value {value!r} can not be converted to boolean"
         ) from None
 
