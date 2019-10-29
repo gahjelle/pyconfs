@@ -6,15 +6,16 @@ be grouped inside nested Configurations as well.
 
 # Standard library imports
 import functools
+import os
 import pathlib
 import re
 import textwrap
 from collections import UserDict
 from datetime import date, datetime
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Tuple, Union
 
 # PyConfs imports
-from pyconfs import converters, exceptions, readers
+from pyconfs import _converters, _exceptions, readers
 
 
 def _dispatch_to(converter):
@@ -78,6 +79,40 @@ class Configuration(UserDict):
         for key, value in entries.items():
             self.update_entry(key=key, value=value, source=source)
 
+    def update_from_env(
+        self,
+        env_paths: Dict[str, Sequence[str]],
+        converters: Optional[Dict[str, str]] = None,
+        prefix: str = "",
+    ) -> None:
+        """Update the configuration from environment variables"""
+
+        # Apply prefix
+        env_paths = {f"{prefix}{k}": v for k, v in env_paths.items()}
+        converters = {f"{prefix}{k}": v for k, v in converters.items()}
+
+        # Loop through the variables defined in the environment
+        for var in set(os.environ) & set(env_paths):
+            value = os.environ[var]
+
+            # Convert type of value
+            if var in converters:
+                converter = converters[var]
+                if callable(converter):
+                    value = converter(value)
+                else:
+                    value = _converters.convert(f"to_{converter}", value=value)
+
+            # Walk down tree for given entry
+            entry = entry_tree = {}
+            *entry_path, entry_key = env_paths[var]
+            for key in entry_path:
+                entry = entry.setdefault(key, {})
+            entry[entry_key] = value
+
+            # Update configuration with new entry
+            self.update_from_dict(entry_tree, source=f"{var} (environment variable)")
+
     def update_from_file(
         self, file_path: Union[str, pathlib.Path], file_format: Optional[str] = None
     ) -> None:
@@ -88,6 +123,13 @@ class Configuration(UserDict):
         )
         entries = readers.read(file_format, file_path=file_path)
         self.update_from_dict(entries, source=f"{file_path} ({file_format} reader)")
+
+    def as_dict(self) -> Dict[str, Any]:
+        """Convert Configuration to a  nested dictionary"""
+        return {
+            k: v.as_dict() if isinstance(v, self.__class__) else v
+            for k, v in self.data.items()
+        }
 
     @property
     def sections(self) -> List["Configuration"]:
@@ -162,7 +204,7 @@ class Configuration(UserDict):
         replaced = _replace(self.data[key], replace_vars=all_vars, default=default)
         if converter is not None:
             if isinstance(converter, str):
-                replaced = converters.convert(f"to_{converter}", value=replaced)
+                replaced = _converters.convert(f"to_{converter}", value=replaced)
             else:
                 replaced = converter(replaced)
 
@@ -186,61 +228,61 @@ class Configuration(UserDict):
         """Get single value, raise an error if key points to a Configuration object"""
         value = self.data[key]
         if isinstance(value, self.__class__):
-            raise exceptions.EntryError(f"{self.name}.{key!r} is a Configuration")
+            raise _exceptions.EntryError(f"{self.name}.{key!r} is a Configuration")
 
         return value
 
-    @_dispatch_to(converters.to_str)
+    @_dispatch_to(_converters.to_str)
     def to_str(self, key: str) -> str:
         """Convert entry to string"""
         return self._get_value(key)
 
-    @_dispatch_to(converters.to_int)
+    @_dispatch_to(_converters.to_int)
     def to_int(self, key: str) -> int:
         """Convert entry to integer number"""
         return self._get_value(key)
 
-    @_dispatch_to(converters.to_float)
+    @_dispatch_to(_converters.to_float)
     def to_float(self, key: str) -> float:
         """Convert entry to a floating point number"""
         return self._get_value(key)
 
-    @_dispatch_to(converters.to_bool)
+    @_dispatch_to(_converters.to_bool)
     def to_bool(self, key: str) -> bool:
         """Convert entry to a boolean"""
         return self._get_value(key)
 
-    @_dispatch_to(converters.to_date)
+    @_dispatch_to(_converters.to_date)
     def to_date(self, key: str) -> date:
         """Convert entry to a date"""
         return self._get_value(key)
 
-    @_dispatch_to(converters.to_datetime)
+    @_dispatch_to(_converters.to_datetime)
     def to_datetime(self, key: str) -> datetime:
         """Convert entry to a datetime"""
         return self._get_value(key)
 
-    @_dispatch_to(converters.to_path)
+    @_dispatch_to(_converters.to_path)
     def to_path(self, key: str) -> pathlib.Path:
         """Convert entry to a path"""
         return self._get_value(key)
 
-    @_dispatch_to(converters.to_list)
+    @_dispatch_to(_converters.to_list)
     def to_list(self, key: str) -> List[Any]:
         """Convert entry to a list"""
         return self._get_value(key)
 
-    @_dispatch_to(converters.to_dict)
+    @_dispatch_to(_converters.to_dict)
     def to_dict(self, key: str) -> Dict[str, Any]:
         """Convert entry to a dictionary"""
         return self._get_value(key)
 
-    @_dispatch_to(converters.to_set)
+    @_dispatch_to(_converters.to_set)
     def to_set(self, key: str) -> Set[Any]:
         """Convert entry to a set"""
         return self._get_value(key)
 
-    @_dispatch_to(converters.to_tuple)
+    @_dispatch_to(_converters.to_tuple)
     def to_tuple(self, key: str, **options: Any) -> Tuple[Any, ...]:
         """Convert entry to a tuple"""
         return self._get_value(key)
