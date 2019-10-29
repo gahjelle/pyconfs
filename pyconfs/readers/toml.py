@@ -29,5 +29,5 @@ def read_toml_file(file_path: pathlib.Path) -> Dict[str, Any]:
 
 @pyplugs.register
 def is_format(file_path: pathlib.Path) -> bool:
-    """Is the given file of ini-format?"""
+    """Is the given file of toml-format?"""
     return file_path.suffix in _SUFFIXES

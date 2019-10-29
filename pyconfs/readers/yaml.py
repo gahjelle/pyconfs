@@ -20,7 +20,7 @@ _SUFFIXES = {".yml", ".yaml"}
 
 @pyplugs.register
 def read_toml_file(file_path: pathlib.Path) -> Dict[str, Any]:
-    """Use toml library to read TOML file"""
+    """Use PyYAML library to read YAML file"""
     with file_path.open(mode="r") as fid:
         cfg = yaml.load(fid, Loader=yaml.FullLoader)
 
@@ -29,5 +29,5 @@ def read_toml_file(file_path: pathlib.Path) -> Dict[str, Any]:
 
 @pyplugs.register
 def is_format(file_path: pathlib.Path) -> bool:
-    """Is the given file of ini-format?"""
+    """Is the given file of yaml-format?"""
     return file_path.suffix in _SUFFIXES
