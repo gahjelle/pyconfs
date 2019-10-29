@@ -29,12 +29,12 @@ requires-python    = ">=3.6"
 requires           = [
     "importlib_resources; python_version < '3.7'",
     "pyplugs",
-    "PyYAML",
-    "toml"
 ]
 
 
 [tool.flit.metadata.requires-extra]
+toml               = ["toml"]
+yaml               = ["PyYAML"]
 dev                = ["black", "bumpversion", "flake8", "flit", "isort", "mypy", "pre-commit"]
 doc                = ["mkdocs"]
 test               = ["black", "flake8", "isort", "mypy", "pytest", "pytest-cov", "tox"]
