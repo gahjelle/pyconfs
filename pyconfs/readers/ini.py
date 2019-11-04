@@ -14,7 +14,7 @@ import pyplugs
 # PyConfs imports
 from pyconfs import _converters
 
-_SUFFIXES = {".ini", ".conf"}
+_SUFFIXES = {".ini", ".cfg", ".conf"}
 _TYPE_SUFFIX = ":type"
 
 
