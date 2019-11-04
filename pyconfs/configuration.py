@@ -86,6 +86,7 @@ class Configuration(UserDict):
         prefix: str = "",
     ) -> None:
         """Update the configuration from environment variables"""
+        converters = {} if converters is None else converters
 
         # Apply prefix
         env_paths = {f"{prefix}{k}": v for k, v in env_paths.items()}
@@ -294,7 +295,7 @@ class Configuration(UserDict):
         """Add sections and entries to list of attributes"""
         return list(super().__dir__()) + list(self.data.keys())
 
-    def __getattr__(self, key: str) -> Union["Configuration", "ConfigurationEntry"]:
+    def __getattr__(self, key: str) -> Union["Configuration", Any]:
         return self[key]
 
     def __repr__(self):
