@@ -5,6 +5,8 @@
 import importlib
 import pathlib
 import sys
+from types import ModuleType
+from typing import Any, Optional
 
 
 class FuturePackage:
@@ -14,16 +16,16 @@ class FuturePackage:
 
     def __init__(self, package_name: str) -> None:
         self._package_name = package_name
-        self._package = None
+        self._package: Optional[ModuleType] = None
 
-    def __getattr__(self, key):
+    def __getattr__(self, key: str) -> Any:
         """Dispatch attribute call to underlying package"""
         if self._package is None:
             self._import_package()
 
         return getattr(self._package, key)
 
-    def _import_package(self):
+    def _import_package(self) -> None:
         """Import the underlying package.
 
         Give proper error message if package is not available
