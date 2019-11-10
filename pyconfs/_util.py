@@ -10,19 +10,24 @@ from typing import Any, Optional
 
 
 class FuturePackage:
-    """Represents a package that will be imported in the future"""
+    """Represents a package that may be imported in the future"""
 
     _pip_names = {"toml": "toml", "yaml": "PyYAML"}
 
     def __init__(self, package_name: str) -> None:
         self._package_name = package_name
-        self._package: Optional[ModuleType] = None
+        self._package_obj: Optional[ModuleType] = None
+
+    @property
+    def _package(self):
+        """The underlying package, imported if necessary"""
+        if self._package_obj is None:
+            self._package_obj = self._import_package()
+
+        return self._package_obj
 
     def __getattr__(self, key: str) -> Any:
         """Dispatch attribute call to underlying package"""
-        if self._package is None:
-            self._import_package()
-
         return getattr(self._package, key)
 
     def _import_package(self) -> None:
@@ -31,7 +36,7 @@ class FuturePackage:
         Give proper error message if package is not available
         """
         try:
-            self._package = importlib.import_module(self._package_name)
+            return importlib.import_module(self._package_name)
         except ImportError as err:
             msg = f"Could not import {self._package_name!r}."
             pip_name = self._pip_names.get(self._package_name)
@@ -40,6 +45,14 @@ class FuturePackage:
                 msg += f" Install it using '{py} -m pip install {pip_name}'"
 
             raise err.__class__(msg) from None
+
+    def __str__(self):
+        """Use string representation of underlying package"""
+        return str(self._package)
+
+    def __repr__(self):
+        """Representation that does not import underlying package"""
+        return f"{self.__class__.__name__}({self._package_name!r})"
 
 
 def delayed_import(package_name: str) -> FuturePackage:
