@@ -12,7 +12,18 @@ import re
 import textwrap
 from collections import UserDict
 from datetime import date, datetime
-from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+)
 
 # PyConfs imports
 from pyconfs import _converters, _exceptions, readers
@@ -43,11 +54,11 @@ class Configuration(UserDict):
 
     @classmethod
     def from_dict(
-        cls, entries: Dict[str, Any], name: Optional[str] = None
+        cls, entries: Dict[str, Any], *, name: Optional[str] = None, source: str = ""
     ) -> "Configuration":
         """Create a Configuration from a dictionary"""
         cfg = cls(name=name)
-        cfg.update_from_dict(entries)
+        cfg.update_from_dict(entries, source=source)
         return cfg
 
     @classmethod
@@ -55,6 +66,7 @@ class Configuration(UserDict):
         cls,
         file_path: Union[str, pathlib.Path],
         file_format: Optional[str] = None,
+        *,
         name: Optional[str] = None,
     ) -> "Configuration":
         """Create a Configuration from a file"""
@@ -125,13 +137,6 @@ class Configuration(UserDict):
         entries = readers.read(file_format, file_path=file_path)
         self.update_from_dict(entries, source=f"{file_path} ({file_format} reader)")
 
-    def as_dict(self) -> Dict[str, Any]:
-        """Convert Configuration to a  nested dictionary"""
-        return {
-            k: v.as_dict() if isinstance(v, self.__class__) else v
-            for k, v in self.data.items()
-        }
-
     @property
     def sections(self) -> List["Configuration"]:
         """List of sections in Configuration
@@ -183,7 +188,7 @@ class Configuration(UserDict):
 
         return src
 
-    def source(self, key):
+    def get_source(self, key):
         """List source for the given key"""
         if key in self.entry_keys:
             return self._source[key]
@@ -211,6 +216,13 @@ class Configuration(UserDict):
 
         return replaced
 
+    def as_dict(self) -> Dict[str, Any]:
+        """Convert Configuration to a  nested dictionary"""
+        return {
+            k: v.as_dict() if isinstance(v, self.__class__) else v
+            for k, v in self.data.items()
+        }
+
     def as_str(self, indent: int = 4, key_width: int = 30) -> str:
         """Represent Configuration as a string"""
         lines = [f"[{self.name}]"]
@@ -221,6 +233,50 @@ class Configuration(UserDict):
             else:
                 lines.append(f"{key:<{key_width}}= {value!r}")
         return "\n".join(lines)
+
+    def as_named_tuple(self, template: Optional[NamedTuple] = None) -> NamedTuple:
+        """Convert Configuration to a named tuple
+
+        If a typed NamedTuple is given as a template, then the configuration
+        will be validated against that template.
+        """
+        # Use NamedTuple to validate fields
+        try:
+            tpl = template(**self.data)
+        except TypeError as err:
+            # Rewrite the error message if fields are missing
+            message = err.args[0].replace("__new__()", f"Configuration {self.name!r}")
+            field = (re.findall(r"'([^']+)'$", message) or ["__no_field_found__"]).pop()
+            if field in self.data:
+                message += f" ({self.get_source(field)})"
+            else:
+                message += f" ({', '.join(self.sources)})"
+            err.args = (message, *err.args[1:])
+            raise
+
+        # Check that types are correct
+        if not hasattr(tpl, "_field_types"):
+            return tpl
+
+        for field, field_type in tpl._field_types.items():
+            if field not in self.data:
+                continue
+
+            try:
+                is_correct_type = isinstance(self.data[field], field_type)
+            except TypeError:
+                # Not all types (e.g. subscripted generics) support isinstance checks
+                continue
+
+            if not is_correct_type:
+                message = (
+                    f"Configuration {self.name!r} got type "
+                    f"{type(self.data[field]).__name__} for field {field!r}. "
+                    f"Expected {field_type.__name__} ({self.get_source(field)})"
+                )
+                raise TypeError(message)
+
+        return tpl
 
     #
     # Add converters used to convert entries to certain types
