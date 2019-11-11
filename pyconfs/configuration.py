@@ -240,6 +240,12 @@ class Configuration(UserDict):
         If a typed NamedTuple is given as a template, then the configuration
         will be validated against that template.
         """
+        # Create a NamedTuple template based on the current data in the Configuration
+        if template is None:
+            template = NamedTuple(
+                self.name, fields=[(k, type(v)) for k, v in self.data.items()]
+            )
+
         # Use NamedTuple to validate fields
         try:
             tpl = template(**self.data)
