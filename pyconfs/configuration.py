@@ -80,7 +80,10 @@ class Configuration(UserDict):
     def update_entry(self, key: str, value: Any, source: str = "") -> None:
         """Update one entry in configuration"""
         if isinstance(value, dict):
-            self.data.setdefault(key, self.__class__(name=key, _vars=self.vars))
+            # Treat dicts as nested configurations
+            self.data.setdefault(
+                key, self.__class__(name=f"{self.name}.{key}", _vars=self.vars)
+            )
             self.data[key].update_from_dict(value, source=source)
         else:
             self.data[key] = value
@@ -259,7 +262,7 @@ class Configuration(UserDict):
         """
         tpl_data = {**self.data, **other_fields}
         src_map = {
-            k: None if k in self.data else f"{k}={v}" for k, v in tpl_data.items()
+            k: None if k in self.data else f"{k}={v!r}" for k, v in tpl_data.items()
         }
 
         # Create a NamedTuple template based on the current data in the Configuration
