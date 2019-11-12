@@ -225,17 +225,20 @@ class Configuration(UserDict):
 
         return replaced
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self, **other_fields: Any) -> Dict[str, Any]:
         """Convert Configuration to a  nested dictionary"""
+        dct_data = {**self.data, **other_fields}
         return {
             k: v.as_dict() if isinstance(v, self.__class__) else v
-            for k, v in self.data.items()
+            for k, v in dct_data.items()
         }
 
-    def as_str(self, indent: int = 4, key_width: int = 30) -> str:
+    def as_str(self, indent: int = 4, key_width: int = 30, **other_fields: Any) -> str:
         """Represent Configuration as a string"""
+        str_data = {**self.data, **other_fields}
+
         lines = [f"[{self.name}]"]
-        for key, value in self.data.items():
+        for key, value in str_data.items():
             if isinstance(value, self.__class__):
                 value_str = value.as_str(indent=indent, key_width=key_width)
                 lines.append("\n" + textwrap.indent(value_str, " " * indent))
