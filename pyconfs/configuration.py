@@ -197,6 +197,15 @@ class Configuration(UserDict):
         else:
             raise KeyError(f"Unknown entry {key!r}")
 
+    def _get_source_string(self, key: str, fallback: Optional[str] = None) -> str:
+        """Format source or sources as a string, be lenient about missing keys"""
+        if key in self:
+            return self.get_source(key)
+        elif fallback is None:
+            return ", ".join(self.sources)
+        else:
+            return fallback
+
     def replace(
         self,
         key: str,
@@ -234,29 +243,36 @@ class Configuration(UserDict):
                 lines.append(f"{key:<{key_width}}= {value!r}")
         return "\n".join(lines)
 
-    def as_named_tuple(self, template: Optional[NamedTuple] = None) -> NamedTuple:
+    def as_named_tuple(
+        self, template: Optional[NamedTuple] = None, **other_fields: Any
+    ) -> NamedTuple:
         """Convert Configuration to a named tuple
 
         If a typed NamedTuple is given as a template, then the configuration
         will be validated against that template.
+
+        Any other fields that are supplied will be added to the named tuple in
+        addition to the data in the configuration.
         """
+        tpl_data = {**self.data, **other_fields}
+        src_map = {
+            k: None if k in self.data else f"{k}={v}" for k, v in tpl_data.items()
+        }
+
         # Create a NamedTuple template based on the current data in the Configuration
         if template is None:
             template = NamedTuple(
-                self.name, fields=[(k, type(v)) for k, v in self.data.items()]
+                self.name, fields=[(k, type(v)) for k, v in tpl_data.items()]
             )
 
         # Use NamedTuple to validate fields
         try:
-            tpl = template(**self.data)
+            tpl = template(**tpl_data)
         except TypeError as err:
             # Rewrite the error message if fields are missing
             message = err.args[0].replace("__new__()", f"Configuration {self.name!r}")
             field = (re.findall(r"'([^']+)'$", message) or ["__no_field_found__"]).pop()
-            if field in self.data:
-                message += f" ({self.get_source(field)})"
-            else:
-                message += f" ({', '.join(self.sources)})"
+            message += f" ({self._get_source_string(field, src_map.get(field))})"
             err.args = (message, *err.args[1:])
             raise
 
@@ -265,20 +281,21 @@ class Configuration(UserDict):
             return tpl
 
         for field, field_type in tpl._field_types.items():
-            if field not in self.data:
+            if field not in tpl_data:
                 continue
 
             try:
-                is_correct_type = isinstance(self.data[field], field_type)
+                is_correct_type = isinstance(tpl_data[field], field_type)
             except TypeError:
                 # Not all types (e.g. subscripted generics) support isinstance checks
                 continue
 
             if not is_correct_type:
                 message = (
-                    f"Configuration {self.name!r} got type "
-                    f"{type(self.data[field]).__name__} for field {field!r}. "
-                    f"Expected {field_type.__name__} ({self.get_source(field)})"
+                    f"Configuration {self.name} got {type(tpl_data[field]).__name__!r} "
+                    f"type for field {field}. "
+                    f"{template.__name__} requires {field_type.__name__!r} "
+                    f"({self._get_source_string(field, src_map.get(field))})"
                 )
                 raise TypeError(message)
 
