@@ -141,6 +141,14 @@ class Configuration(UserDict):
         self.update_from_dict(entries, source=f"{file_path} ({file_format} reader)")
 
     @property
+    def section_items(self) -> List[Tuple[str, "Configuration"]]:
+        """List of section names and sections in Configuration
+
+        Only actual sections are included, not top level entries.
+        """
+        return [(n, s) for n, s in self.data.items() if isinstance(s, self.__class__)]
+
+    @property
     def sections(self) -> List["Configuration"]:
         """List of sections in Configuration
 
