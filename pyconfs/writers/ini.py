@@ -5,14 +5,12 @@
 
 # Standard library imports
 import io
-import pathlib
 from configparser import ConfigParser
 from typing import Any, Dict
 
 # Third party imports
 import pyplugs
 
-_SUFFIXES = {".ini", ".cfg", ".conf"}
 _TYPE_SUFFIX = ":type"
 
 
@@ -61,9 +59,3 @@ def _as_str(key: str, entry: Any) -> Dict[str, str]:
         return {key: ", ".join(str(item) for item in entry)}
     else:
         return {key: str(entry)}
-
-
-@pyplugs.register
-def is_format(file_path: pathlib.Path) -> bool:
-    """Is the given file of ini-format?"""
-    return file_path.suffix in _SUFFIXES

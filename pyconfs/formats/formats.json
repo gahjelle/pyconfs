@@ -1,0 +1,6 @@
+{
+    "ini": [".ini", ".cfg", ".conf"],
+    "json": [".json"],
+    "toml": [".toml"],
+    "yaml": [".yml", ".yaml"]
+}
