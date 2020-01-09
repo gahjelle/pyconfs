@@ -5,7 +5,7 @@
 
 # Standard library imports
 import pathlib
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 # Third party imports
 import pyplugs
@@ -17,10 +17,10 @@ names = pyplugs.names_factory(__package__)
 as_str = pyplugs.call_factory(__package__)
 
 
-def write(
+def as_file(
     config: Dict[str, Any],
     file_path: pathlib.Path,
-    file_format=None,
+    file_format: Optional[str] = None,
     **writer_args: Any,
 ) -> None:
     """Write dictionary to file with the given format
