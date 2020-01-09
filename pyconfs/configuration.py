@@ -244,17 +244,24 @@ class Configuration(UserDict):
             for k, v in dct_data.items()
         }
 
-    def as_str(self, indent: int = 4, key_width: int = 30, **other_fields: Any) -> str:
+    def as_str(
+        self,
+        format: Optional[str] = None,
+        indent: int = 2,
+        key_width: int = 20,
+        **writer_args: Any,
+    ) -> str:
         """Represent Configuration as a string"""
-        str_data = {**self.data, **other_fields}
+        if format is not None:
+            return writers.as_str(format, config=self.as_dict(), **writer_args)
 
         lines = [f"[{self.name}]"]
-        for key, value in str_data.items():
+        for key, value in self.data.items():
             if isinstance(value, self.__class__):
                 value_str = value.as_str(indent=indent, key_width=key_width)
                 lines.append("\n" + textwrap.indent(value_str, " " * indent))
             else:
-                lines.append(f"{key:<{key_width}}= {value!r}")
+                lines.append(f"{key:<{key_width}} = {value!r}")
         return "\n".join(lines)
 
     def as_file(
@@ -264,13 +271,11 @@ class Configuration(UserDict):
         **writer_args: Any,
     ):
         """Write Configuration to a file"""
-        file_path = pathlib.Path(file_path)
-        file_format = (
-            writers.guess_format(file_path) if file_format is None else file_format
-        )
-
         writers.write(
-            file_format, config=self.as_dict(), file_path=file_path, **writer_args
+            config=self.as_dict(),
+            file_path=pathlib.Path(file_path),
+            file_format=file_format,
+            **writer_args,
         )
 
     def as_named_tuple(

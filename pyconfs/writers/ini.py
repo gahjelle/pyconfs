@@ -4,6 +4,7 @@
 """
 
 # Standard library imports
+import io
 import pathlib
 from configparser import ConfigParser
 from typing import Any, Dict
@@ -16,21 +17,20 @@ _TYPE_SUFFIX = ":type"
 
 
 @pyplugs.register
-def write_ini_file(
-    config: Dict[str, Any], file_path: pathlib.Path, keep_types: bool = False
-) -> None:
+def as_ini(config: Dict[str, Any], store_types: bool = False, **ini_args: Any) -> None:
     """Use ConfigParser to write an ini-file"""
     cfg = ConfigParser(delimiters=("=",))
-    cfg.update(_normalize(config, keep_types=keep_types))
+    cfg.update(_normalize(config, store_types=store_types))
 
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    with file_path.open(mode="w") as fid:
-        cfg.write(fid)
+    # Write to a string
+    with io.StringIO() as string:
+        cfg.write(string, **ini_args)
+        return string.getvalue()
 
 
-def _normalize(config: Dict[str, Any], keep_types: bool) -> Dict[str, Dict[str, str]]:
+def _normalize(config: Dict[str, Any], store_types: bool) -> Dict[str, Dict[str, str]]:
     """ConfigParser only supports string values and 1 level of nesting"""
-    if keep_types:
+    if store_types:
         raise NotImplementedError("Handling of types is not implemented in ini-writer")
 
     normalized = {}
