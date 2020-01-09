@@ -14,12 +14,9 @@ _SUFFIXES = {".json"}
 
 
 @pyplugs.register
-def read_json_file(file_path: pathlib.Path) -> Dict[str, Any]:
-    """Use json standard library to read JSON file"""
-    with file_path.open(mode="r") as fid:
-        cfg = json.load(fid)
-
-    return cfg
+def from_json(string: str, **json_args: Any) -> Dict[str, Any]:
+    """Use json standard library to read JSON"""
+    return json.loads(string, **json_args)
 
 
 @pyplugs.register

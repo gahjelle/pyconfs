@@ -1,6 +1,5 @@
 """Reader for ini-files based on ConfigParser
 
-
 """
 
 # Standard library imports
@@ -19,14 +18,12 @@ _TYPE_SUFFIX = ":type"
 
 
 @pyplugs.register
-def read_ini_file(file_path: pathlib.Path) -> Dict[str, Any]:
+def from_ini(string: str, **ini_args: Any) -> Dict[str, Any]:
     """Use ConfigParser to read an ini-file"""
-    cfg = ConfigParser(delimiters=("=",))
-    files = cfg.read(file_path)
-    if not files:
-        raise FileNotFoundError(f"{file_path} could not be opened by ConfigParser")
+    cfg = ConfigParser(delimiters=("=",), **ini_args)
+    cfg.read_string(string)
 
-    # Ini-files organize into sections with key, value pairs
+    # Convert to nested dictionary and interpret given types
     return _convert_types(
         {
             name: {k: v for k, v in section.items()}
@@ -36,7 +33,7 @@ def read_ini_file(file_path: pathlib.Path) -> Dict[str, Any]:
     )
 
 
-def _convert_types(entries):
+def _convert_types(entries: Dict[str, str]) -> Dict[str, Any]:
     """Convert values inside entries dictionary based on type information
 
     Ini-files by default does not support type information (everything is a

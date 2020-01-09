@@ -19,12 +19,9 @@ _SUFFIXES = {".toml"}
 
 
 @pyplugs.register
-def read_toml_file(file_path: pathlib.Path) -> Dict[str, Any]:
+def from_toml(string: str, **toml_args: Any) -> Dict[str, Any]:
     """Use toml library to read TOML file"""
-    with file_path.open(mode="r") as fid:
-        cfg = toml.load(fid)
-
-    return cfg
+    return toml.loads(string, **toml_args)
 
 
 @pyplugs.register

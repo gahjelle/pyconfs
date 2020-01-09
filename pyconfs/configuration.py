@@ -77,6 +77,15 @@ class Configuration(UserDict):
         cfg.update_from_file(file_path=file_path, file_format=file_format)
         return cfg
 
+    @classmethod
+    def from_str(
+        cls, string: str, format: str, *, name: Optional[str] = None
+    ) -> "Configuration":
+        """Create a Configuration from a string"""
+        cfg = cls(name=name)
+        cfg.update_from_str(string, format=format)
+        return cfg
+
     def update_entry(self, key: str, value: Any, source: str = "") -> None:
         """Update one entry in configuration"""
         if isinstance(value, dict):
@@ -130,15 +139,28 @@ class Configuration(UserDict):
             self.update_from_dict(entry_tree, source=f"{var} (environment variable)")
 
     def update_from_file(
-        self, file_path: Union[str, pathlib.Path], file_format: Optional[str] = None
+        self,
+        file_path: Union[str, pathlib.Path],
+        file_format: Optional[str] = None,
+        **reader_args: Any,
     ) -> None:
         """Update the configuration from a file"""
-        file_path = pathlib.Path(file_path).resolve()
-        file_format = (
-            readers.guess_format(file_path) if file_format is None else file_format
+        file_path = pathlib.Path(file_path)
+        entries = readers.from_file(
+            file_path=file_path, file_format=file_format, **reader_args
         )
-        entries = readers.read(file_format, file_path=file_path)
-        self.update_from_dict(entries, source=f"{file_path} ({file_format} reader)")
+        self.update_from_dict(
+            entries, source=f"{file_path.resolve()} ({file_format} reader)"
+        )
+
+    def update_from_str(self, string: str, format: str, *, source=None) -> None:
+        """Update the configuration from a string"""
+        if source is None:
+            string_repr = f"{string[:30]} ..." if len(string) > 32 else string
+            source = f"String: {string_repr} ({format} reader)"
+
+        entries = readers.from_str(format, string=string)
+        self.update_from_dict(entries, source=source)
 
     @property
     def section_items(self) -> List[Tuple[str, "Configuration"]]:
@@ -247,6 +269,7 @@ class Configuration(UserDict):
     def as_str(
         self,
         format: Optional[str] = None,
+        *,
         indent: int = 2,
         key_width: int = 20,
         **writer_args: Any,
@@ -271,7 +294,7 @@ class Configuration(UserDict):
         **writer_args: Any,
     ):
         """Write Configuration to a file"""
-        writers.write(
+        writers.as_file(
             config=self.as_dict(),
             file_path=pathlib.Path(file_path),
             file_format=file_format,

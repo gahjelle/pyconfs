@@ -19,12 +19,11 @@ _SUFFIXES = {".yml", ".yaml"}
 
 
 @pyplugs.register
-def read_toml_file(file_path: pathlib.Path) -> Dict[str, Any]:
+def from_yaml(string: str, Loader: Any = None, **yaml_args: Any) -> Dict[str, Any]:
     """Use PyYAML library to read YAML file"""
-    with file_path.open(mode="r") as fid:
-        cfg = yaml.load(fid, Loader=yaml.FullLoader)
+    Loader = yaml.FullLoader if Loader is None else Loader
 
-    return cfg
+    return yaml.load(string, Loader=Loader, **yaml_args)
 
 
 @pyplugs.register
