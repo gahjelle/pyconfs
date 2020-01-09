@@ -26,7 +26,7 @@ from typing import (
 )
 
 # PyConfs imports
-from pyconfs import _converters, _exceptions, readers
+from pyconfs import _converters, _exceptions, readers, writers
 
 
 def _dispatch_to(converter):
@@ -237,7 +237,7 @@ class Configuration(UserDict):
         return replaced
 
     def as_dict(self, **other_fields: Any) -> Dict[str, Any]:
-        """Convert Configuration to a  nested dictionary"""
+        """Convert Configuration to a nested dictionary"""
         dct_data = {**self.data, **other_fields}
         return {
             k: v.as_dict() if isinstance(v, self.__class__) else v
@@ -256,6 +256,22 @@ class Configuration(UserDict):
             else:
                 lines.append(f"{key:<{key_width}}= {value!r}")
         return "\n".join(lines)
+
+    def as_file(
+        self,
+        file_path: Union[str, pathlib.Path],
+        file_format: Optional[str] = None,
+        **writer_args: Any,
+    ):
+        """Write Configuration to a file"""
+        file_path = pathlib.Path(file_path)
+        file_format = (
+            writers.guess_format(file_path) if file_format is None else file_format
+        )
+
+        writers.write(
+            file_format, config=self.as_dict(), file_path=file_path, **writer_args
+        )
 
     def as_named_tuple(
         self, template: Optional[NamedTuple] = None, **other_fields: Any
