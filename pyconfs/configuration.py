@@ -381,7 +381,12 @@ class Configuration(UserDict):
         return list(super().__dir__()) + list(self.data.keys())
 
     def __getattr__(self, key: str) -> Union["Configuration", Any]:
-        return self[key]
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(
+                f"Configuration {self.name} has no entry {key!r}"
+            ) from None
 
     def __repr__(self):
         """Simple representation of a Configuration"""
