@@ -42,3 +42,4 @@ workflows:
       - "test-py36"
       - "test-py37"
       - "test-py38"
+      - "test-py39"
