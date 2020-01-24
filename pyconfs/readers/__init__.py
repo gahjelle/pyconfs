@@ -17,7 +17,10 @@ from_str = pyplugs.call_factory(__package__)
 
 
 def from_file(
-    file_path: pathlib.Path, file_format: Optional[str] = None, **reader_args: Any
+    file_path: pathlib.Path,
+    file_format: Optional[str] = None,
+    encoding: str = "utf-8",
+    **reader_args: Any
 ) -> Dict[str, Any]:
     """Read a configuration from file with the given format
 
@@ -26,4 +29,6 @@ def from_file(
     file_format = (
         formats.guess_format(file_path) if file_format is None else file_format
     )
-    return from_str(file_format, string=file_path.read_text(), **reader_args)
+    return from_str(
+        file_format, string=file_path.read_text(encoding=encoding), **reader_args
+    )

@@ -68,13 +68,17 @@ class Configuration(UserDict):
         file_format: Optional[str] = None,
         *,
         name: Optional[str] = None,
+        encoding: str = "utf-8",
+        **reader_args: Any,
     ) -> "Configuration":
         """Create a Configuration from a file"""
         file_path = pathlib.Path(file_path)
         name = file_path.name if name is None else name
 
         cfg = cls(name=name)
-        cfg.update_from_file(file_path=file_path, file_format=file_format)
+        cfg.update_from_file(
+            file_path=file_path, file_format=file_format, **reader_args
+        )
         return cfg
 
     @classmethod
@@ -142,6 +146,7 @@ class Configuration(UserDict):
         self,
         file_path: Union[str, pathlib.Path],
         file_format: Optional[str] = None,
+        encoding: str = "utf-8",
         **reader_args: Any,
     ) -> None:
         """Update the configuration from a file"""
@@ -291,6 +296,7 @@ class Configuration(UserDict):
         self,
         file_path: Union[str, pathlib.Path],
         file_format: Optional[str] = None,
+        encoding: str = "utf-8",
         **writer_args: Any,
     ):
         """Write Configuration to a file"""
@@ -298,6 +304,7 @@ class Configuration(UserDict):
             config=self.as_dict(),
             file_path=pathlib.Path(file_path),
             file_format=file_format,
+            encoding=encoding,
             **writer_args,
         )
 

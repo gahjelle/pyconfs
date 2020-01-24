@@ -20,6 +20,7 @@ def as_file(
     config: Dict[str, Any],
     file_path: pathlib.Path,
     file_format: Optional[str] = None,
+    encoding: str = "utf-8",
     **writer_args: Any,
 ) -> None:
     """Write dictionary to file with the given format
@@ -33,4 +34,6 @@ def as_file(
 
     # Write file
     file_path.parent.mkdir(parents=True, exist_ok=True)
-    file_path.write_text(as_str(file_format, config=config, **writer_args))
+    file_path.write_text(
+        as_str(file_format, config=config, **writer_args), encoding=encoding
+    )
