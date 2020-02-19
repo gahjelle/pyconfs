@@ -10,6 +10,7 @@ import os
 import pathlib
 import re
 import textwrap
+import warnings
 from collections import UserDict
 from datetime import date, datetime
 from typing import (
@@ -127,10 +128,19 @@ class Configuration(UserDict):
             # Convert type of value
             if var in converters:
                 converter = converters[var]
-                if callable(converter):
-                    value = converter(value)
-                else:
-                    value = _converters.convert(f"to_{converter}", value=value)
+                try:
+                    if callable(converter):
+                        value = converter(value)
+                    else:
+                        value = _converters.convert(f"to_{converter}", value=value)
+                except ValueError:
+                    warnings.warn(
+                        RuntimeWarning(
+                            f"Could not convert {var}={value!r} using {converter}"
+                        ),
+                        stacklevel=2,
+                    )
+                    break
 
             # Walk down tree for given entry
             entry = entry_tree = {}
@@ -216,6 +226,33 @@ class Configuration(UserDict):
         Only actual keys are included, not subsections.
         """
         return [k for k, v in self.data.items() if not isinstance(v, self.__class__)]
+
+    @property
+    def leafs(self) -> List[Tuple["Configuration", str, Any]]:
+        """Generator of all keys and values, recursively including subsections"""
+        for key, value in self.data.items():
+            if isinstance(value, self.__class__):
+                yield from value.leafs
+            else:
+                yield self, key, value
+
+    @property
+    def leaf_keys(self) -> List[Tuple["Configuration", str]]:
+        """Generator of all keys in Configuration, recursively including subsections"""
+        for key, value in self.data.items():
+            if isinstance(value, self.__class__):
+                yield from value.leaf_keys
+            else:
+                yield self, key
+
+    @property
+    def leaf_values(self) -> List[Any]:
+        """Generator of values in Configuration, recursively including subsections"""
+        for key, value in self.data.items():
+            if isinstance(value, self.__class__):
+                yield from value.leaf_values
+            else:
+                yield value
 
     @property
     def sources(self):
