@@ -20,4 +20,7 @@ def from_yaml(string: str, Loader: Any = None, **yaml_args: Any) -> Dict[str, An
     """Use PyYAML library to read YAML file"""
     Loader = yaml.FullLoader if Loader is None else Loader
 
-    return yaml.load(string, Loader=Loader, **yaml_args)
+    try:
+        return yaml.load(string, Loader=Loader, **yaml_args)
+    except yaml.composer.ComposerError:
+        return next(yaml.load_all(string, Loader=Loader, **yaml_args))
