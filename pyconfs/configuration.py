@@ -289,7 +289,7 @@ class Configuration(UserDict):
         **replace_vars: str,
     ) -> Any:
         """Replace values in an entry based on {} format strings"""
-        all_vars = {**self.vars, **replace_vars}
+        all_vars = {k: str(v) for k, v in {**self.vars, **replace_vars}.items()}
         replaced = _replace(self.data[key], replace_vars=all_vars, default=default)
         if dedent:
             replaced = textwrap.dedent(replaced)
