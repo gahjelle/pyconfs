@@ -289,15 +289,15 @@ class Configuration(UserDict):
         **replace_vars: str,
     ) -> Any:
         """Replace values in an entry based on {} format strings"""
-        all_vars = {k: str(v) for k, v in {**self.vars, **replace_vars}.items()}
-        replaced = _replace(self.data[key], replace_vars=all_vars, default=default)
-        if dedent:
-            replaced = textwrap.dedent(replaced)
+        all_vars = {**self.vars, **replace_vars}
+        value = textwrap.dedent(self.data[key]) if dedent else self.data[key]
+
+        replaced = _replace(value, replace_vars=all_vars, default=default)
         if converter is not None:
-            if isinstance(converter, str):
-                replaced = _converters.convert(f"to_{converter}", value=replaced)
-            else:
+            if callable(converter):
                 replaced = converter(replaced)
+            else:
+                replaced = _converters.convert(f"to_{converter}", value=replaced)
 
         return replaced
 
@@ -525,10 +525,13 @@ def _replace(
         replacement = replace_vars.get(var)
         if replacement is None:
             # Default replacements
-            replacement = var_expr if default is None else default
+            if default is None:
+                continue
+            replacement = default
         else:
             # Nested replacements
-            replacement = _replace(replacement, replace_vars, default)
+            if isinstance(replacement, str):
+                replacement = _replace(replacement, replace_vars, default)
 
         # Use str.format to handle format specifiers
         string = string.replace(var_expr, var_expr.format(**{var: replacement}))
