@@ -37,6 +37,14 @@ _BOOLEAN_STATES = {
 }
 
 
+def convert_to(dtype, value):
+    """Convert value to the given type"""
+    try:
+        return convert(f"to_{dtype}", value=value)
+    except pyplugs.UnknownPluginFunctionError:
+        raise ValueError(f"Conversion to {dtype} is not supported")
+
+
 @pyplugs.register
 def to_str(value: str) -> str:
     """Convert value to a string"""

@@ -13,6 +13,7 @@ from collections import namedtuple as _namedtuple
 from datetime import date as _date
 
 # PyConfs imports
+from pyconfs._converters import convert_to  # noqa
 from pyconfs.configuration import Configuration  # noqa
 
 # Version of PyConfs
