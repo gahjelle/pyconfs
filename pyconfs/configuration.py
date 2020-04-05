@@ -49,7 +49,7 @@ class Configuration(UserDict):
     ) -> None:
         """Create an empty configuration"""
         super().__init__()
-        self.name = "pyconfs.Configuration" if name is None else name
+        self.name = name
         self.vars = {} if _vars is None else _vars
         self._source = {}
 
@@ -74,7 +74,6 @@ class Configuration(UserDict):
     ) -> "Configuration":
         """Create a Configuration from a file"""
         file_path = pathlib.Path(file_path)
-        name = file_path.name if name is None else name
 
         cfg = cls(name=name)
         cfg.update_from_file(
@@ -95,9 +94,8 @@ class Configuration(UserDict):
         """Update one entry in configuration"""
         if isinstance(value, dict):
             # Treat dicts as nested configurations
-            self.data.setdefault(
-                key, self.__class__(name=f"{self.name}.{key}", _vars=self.vars)
-            )
+            name = key if self.name is None else f"{self.name}.{key}"
+            self.data.setdefault(key, self.__class__(name=name, _vars=self.vars))
             self.data[key].update_from_dict(value, source=source)
         else:
             self.data[key] = value
@@ -286,12 +284,15 @@ class Configuration(UserDict):
         key: str,
         *,
         converter: Optional[Callable[[str], Any]] = None,
+        dedent: bool = False,
         default: Optional[str] = None,
         **replace_vars: str,
     ) -> Any:
         """Replace values in an entry based on {} format strings"""
         all_vars = {**self.vars, **replace_vars}
         replaced = _replace(self.data[key], replace_vars=all_vars, default=default)
+        if dedent:
+            replaced = textwrap.dedent(replaced)
         if converter is not None:
             if isinstance(converter, str):
                 replaced = _converters.convert(f"to_{converter}", value=replaced)
@@ -316,17 +317,17 @@ class Configuration(UserDict):
         key_width: int = 20,
         **writer_args: Any,
     ) -> str:
-        """Represent Configuration as a string"""
+        """Represent Configuration as a string, heavily inspired by TOML"""
         if format is not None:
             return writers.as_str(format, config=self.as_dict(), **writer_args)
 
-        lines = [f"[{self.name}]"]
+        lines = [] if self.name is None else [f"[{self.name}]"]
         for key, value in self.data.items():
             if isinstance(value, self.__class__):
                 value_str = value.as_str(indent=indent, key_width=key_width)
                 lines.append("\n" + textwrap.indent(value_str, " " * indent))
             else:
-                lines.append(f"{key:<{key_width}} = {value!r}")
+                lines.append(f"{key:<{key_width}} = {_repr_toml(value)}")
         return "\n".join(lines)
 
     def as_file(
@@ -486,7 +487,10 @@ class Configuration(UserDict):
 
     def __repr__(self):
         """Simple representation of a Configuration"""
-        return f"{self.__class__.__name__}(name={self.name!r})"
+        if self.name is None:
+            return f"{self.__class__.__name__}()"
+        else:
+            return f"{self.__class__.__name__}(name={self.name!r})"
 
     def __str__(self):
         """Full representation of a Configuration"""
@@ -530,3 +534,29 @@ def _replace(
         string = string.replace(var_expr, var_expr.format(**{var: replacement}))
 
     return string
+
+
+def _repr_toml(value: Any) -> str:
+    """Represent value as a TOML string"""
+
+    # Use double quotes for strings
+    if isinstance(value, str):
+        if "\n" in value:
+            # Use triple quotes for multi-line strings
+            return f'"""\n{value}"""'
+        else:
+            return f'"{value}"'
+
+    # Dates can be written using isoformat
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+
+    # Bools should be written true and false
+    if isinstance(value, bool):
+        return repr(value).lower()
+
+    # Handle lists recursively
+    if isinstance(value, (list, tuple)):
+        return f"[{', '.join(_repr_toml(v) for v in value)}]"
+
+    return str(value)
