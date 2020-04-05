@@ -29,6 +29,9 @@ from typing import (
 # PyConfs imports
 from pyconfs import _converters, _exceptions, readers, writers
 
+# Marker for missing keys
+MISSING = object()
+
 
 def _dispatch_to(converter):
     """Decorator for dispatching methods to converter functions"""
@@ -175,6 +178,21 @@ class Configuration(UserDict):
         entries = readers.from_str(format, string=string)
         self.update_from_dict(entries, source=source)
 
+    def get(self, key, default=None):
+        """Get a value from the configuration, allow nested keys"""
+        if isinstance(key, list):
+            first_key, *tail_keys = key
+            value = super().get(first_key, default)
+            if tail_keys:
+                try:
+                    return value.get(list(tail_keys), default)
+                except AttributeError:
+                    return default
+            else:
+                return value
+        else:
+            return super().get(key, default)
+
     @property
     def section_items(self) -> List[Tuple[str, "Configuration"]]:
         """List of section names and sections in Configuration
@@ -290,9 +308,15 @@ class Configuration(UserDict):
     ) -> Any:
         """Replace values in an entry based on {} format strings"""
         all_vars = {**self.vars, **replace_vars}
-        value = textwrap.dedent(self.data[key]) if dedent else self.data[key]
+        value = self.get(key, MISSING)
+        if value is MISSING:
+            raise KeyError(key)
 
+        # Replace variables
+        value = textwrap.dedent(value) if dedent else value
         replaced = _replace(value, replace_vars=all_vars, default=default)
+
+        # Optionally convert value to a different data type
         if converter is not None:
             if callable(converter):
                 replaced = converter(replaced)
@@ -509,9 +533,11 @@ def _replace(
     This function is used instead of str.format for three reasons. It handles:
     - that not all pairs of {...} are replaced at once
     - optional default values for variables that are not specified
-    - nested replacements where values of replace_vars may be replaced themselves
+    - nested replacements where values of replace_vars may be replaced
+      themselves
 
-    Credit: Originally written for `midgard.config.Configuration`
+    Credit: Originally written for `midgard.config.Configuration`.
+            See https://github.com/kartverket/midgard
 
     Args:
         string:        Original string
