@@ -11,7 +11,7 @@ import pathlib
 import re
 import textwrap
 import warnings
-from collections import UserDict
+from collections import UserDict, UserList
 from datetime import date, datetime
 from typing import (
     Any,
@@ -46,7 +46,11 @@ def _dispatch_to(converter):
     return _decorator_dispatch_to
 
 
-class Configuration(UserDict):
+class IsConfiguration:
+    """Mixin used to identify Configuration objects"""
+
+
+class Configuration(UserDict, IsConfiguration):
     def __init__(
         self, name: Optional[str] = None, _vars: Optional[Dict[str, str]] = None
     ) -> None:
@@ -95,11 +99,18 @@ class Configuration(UserDict):
 
     def update_entry(self, key: str, value: Any, source: str = "") -> None:
         """Update one entry in configuration"""
+        name = key if self.name is None else f"{self.name}.{key}"
+
+        # Treat dicts as nested configurations
         if isinstance(value, dict):
-            # Treat dicts as nested configurations
-            name = key if self.name is None else f"{self.name}.{key}"
             self.data.setdefault(key, self.__class__(name=name, _vars=self.vars))
             self.data[key].update_from_dict(value, source=source)
+
+        # Treat lists with nested elements as configuration lists
+        elif isinstance(value, list) and _is_nested(value):
+            self.data.setdefault(key, ConfigurationList(name=name, _vars=self.vars))
+            self.data[key].update_from_list(value, source=source)
+
         else:
             self.data[key] = value
             self._source[key] = source
@@ -329,7 +340,7 @@ class Configuration(UserDict):
         """Convert Configuration to a nested dictionary"""
         dct_data = {**self.data, **other_fields}
         return {
-            k: v.as_dict() if isinstance(v, self.__class__) else v
+            k: v.as_dict() if isinstance(v, IsConfiguration) else v
             for k, v in dct_data.items()
         }
 
@@ -339,15 +350,16 @@ class Configuration(UserDict):
         *,
         indent: int = 2,
         key_width: int = 20,
+        skip_header: bool = False,
         **writer_args: Any,
     ) -> str:
         """Represent Configuration as a string, heavily inspired by TOML"""
         if format is not None:
             return writers.as_str(format, config=self.as_dict(), **writer_args)
 
-        lines = [] if self.name is None else [f"[{self.name}]"]
+        lines = [] if self.name is None or skip_header else [f"[{self.name}]"]
         for key, value in self.data.items():
-            if isinstance(value, self.__class__):
+            if isinstance(value, IsConfiguration):
                 value_str = value.as_str(indent=indent, key_width=key_width)
                 lines.append("\n" + textwrap.indent(value_str, " " * indent))
             else:
@@ -521,6 +533,94 @@ class Configuration(UserDict):
         return self.as_str()
 
 
+class ConfigurationList(UserList, IsConfiguration):
+    """Collect a list of Configurations in one object"""
+
+    def __init__(
+        self, name: Optional[str] = None, _vars: Optional[Dict[str, str]] = None
+    ) -> None:
+        """Create an empty configuration"""
+        print(f"Creating {self.__class__.__name__}(name={name})")
+        super().__init__()
+        self.name = name
+        self.vars = {} if _vars is None else _vars
+        self._source = []
+
+    @classmethod
+    def from_list(
+        cls, entries: List[Any], *, name: Optional[str] = None, source: str = ""
+    ) -> "ConfigurationList":
+        """Create a ConfigurationList from a list"""
+        cfg = cls(name=name)
+        cfg.update_from_list(entries, source=source)
+        return cfg
+
+    def update_entry(self, value: Any, source: str = "") -> None:
+        """Add one entry to the configuration list"""
+        if isinstance(value, dict):
+            # Treat dicts as nested configurations
+            name = self.name
+            entry = Configuration.from_dict(value, name=name, source=source)
+            self.data.append(entry)
+            self._source.append(entry._source)
+        elif isinstance(value, list):
+            name = self.name
+            entry = ConfigurationList.from_list(value, name=name, source=source)
+            self.data.append(entry)
+            self._source.append(entry._source)
+        else:
+            self.data.append(value)
+            self._source.append(source)
+
+    def update_from_list(self, entries: List[Any], source: str = "") -> None:
+        """Update the configuration list from a list"""
+        for entry in entries:
+            self.update_entry(entry, source=source)
+
+    def as_dict(self) -> List[Any]:
+        """Convert ConfigurationList to a nested dictionary"""
+        return [v.as_dict() if isinstance(v, IsConfiguration) else v for v in self.data]
+
+    def as_str(self, *, indent: int = 2, key_width: int = 20) -> str:
+        """Represent configuration list as a string"""
+        lines = []
+        for value in self.data:
+            lines.append(f"\n[[{self.name}]]")
+            if isinstance(value, IsConfiguration):
+                value_str = value.as_str(
+                    indent=indent, key_width=key_width, skip_header=True
+                )
+                lines.append(value_str)
+            else:
+                lines.append(f"{_repr_toml(value)}")
+        return "\n".join(lines).strip()
+
+    #
+    # Dunder methods
+    #
+    def __getattr__(self, key: str) -> Union["ConfigurationList", Any]:
+        """Include attributes available on all entries"""
+        try:
+            return self.from_list(getattr(entry, key) for entry in self.data)
+        except AttributeError:
+            raise AttributeError(
+                f"{self.__class__.__name__!r} object has no attribute {key!r}"
+            ) from None
+
+    def __getitem__(self, key: Union[int, str]) -> Union["ConfigurationList", Any]:
+        """Include items available on all entries"""
+        try:
+            return super().__getitem__(key)
+        except TypeError:
+            try:
+                return self.from_list(entry[key] for entry in self.data)
+            except KeyError:
+                raise AttributeError(
+                    f"All items in ConfigurationList {self.name} "
+                    f"don't have entry {key!r}"
+                ) from None
+
+
 def _replace(
     string: str, replace_vars: Dict[str, str], default: Optional[str] = None
 ) -> str:
@@ -589,3 +689,8 @@ def _repr_toml(value: Any) -> str:
         return f"[{', '.join(_repr_toml(v) for v in value)}]"
 
     return str(value)
+
+
+def _is_nested(sequence) -> bool:
+    """Check if the sequence contains nested lists or dictionaries"""
+    return any(isinstance(s, (dict, list, IsConfiguration)) for s in sequence)
