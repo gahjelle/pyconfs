@@ -11,7 +11,7 @@ import pathlib
 import re
 import textwrap
 import warnings
-from collections import UserDict
+from collections import UserDict, UserList
 from datetime import date, datetime
 from typing import (
     Any,
@@ -46,7 +46,11 @@ def _dispatch_to(converter):
     return _decorator_dispatch_to
 
 
-class Configuration(UserDict):
+class IsConfiguration:
+    """Mixin used to identify Configuration objects"""
+
+
+class Configuration(UserDict, IsConfiguration):
     def __init__(
         self, name: Optional[str] = None, _vars: Optional[Dict[str, str]] = None
     ) -> None:
@@ -95,11 +99,18 @@ class Configuration(UserDict):
 
     def update_entry(self, key: str, value: Any, source: str = "") -> None:
         """Update one entry in configuration"""
+        name = key if self.name is None else f"{self.name}.{key}"
+
+        # Treat dicts as nested configurations
         if isinstance(value, dict):
-            # Treat dicts as nested configurations
-            name = key if self.name is None else f"{self.name}.{key}"
             self.data.setdefault(key, self.__class__(name=name, _vars=self.vars))
             self.data[key].update_from_dict(value, source=source)
+
+        # Treat lists with nested elements as configuration lists
+        elif isinstance(value, list) and _is_nested(value):
+            self.data.setdefault(key, ConfigurationList(name=name, _vars=self.vars))
+            self.data[key].update_from_list(value, source=source)
+
         else:
             self.data[key] = value
             self._source[key] = source
@@ -199,7 +210,8 @@ class Configuration(UserDict):
 
         Only actual sections are included, not top level entries.
         """
-        return [(n, s) for n, s in self.data.items() if isinstance(s, self.__class__)]
+        # return list(self._section_items())
+        return [s for s in self._section_items()]
 
     @property
     def sections(self) -> List["Configuration"]:
@@ -207,7 +219,7 @@ class Configuration(UserDict):
 
         Only actual sections are included, not top level entries.
         """
-        return [s for s in self.data.values() if isinstance(s, self.__class__)]
+        return [s for n, s in self._section_items()]
 
     @property
     def section_names(self) -> List[str]:
@@ -215,7 +227,20 @@ class Configuration(UserDict):
 
         Only actual sections are included, not top level entries.
         """
-        return [n for n, s in self.data.items() if isinstance(s, self.__class__)]
+        return [n for n, s in self._section_items()]
+
+    def _section_items(self) -> List[Tuple[str, "Configuration"]]:
+        """Generator of section names and sections in Configuration
+
+        Only actual sections are included, not top level entries.
+        """
+        for section in self.data.values():
+            if isinstance(section, IsConfiguration):
+                yield from section._flatten_section()
+
+    def _flatten_section(self) -> List[Tuple[str, "Configuration"]]:
+        """Return configuration as a (name, Configuration) tuple"""
+        return [(self.name, self)]
 
     @property
     def entries(self) -> List[Tuple[str, Any]]:
@@ -224,7 +249,7 @@ class Configuration(UserDict):
         Only actual entries are included, not subsections.
         """
         return [
-            (k, v) for k, v in self.data.items() if not isinstance(v, self.__class__)
+            (k, v) for k, v in self.data.items() if not isinstance(v, IsConfiguration)
         ]
 
     @property
@@ -233,7 +258,7 @@ class Configuration(UserDict):
 
         Only actual values are included, not subsections.
         """
-        return [v for v in self.data.values() if not isinstance(v, self.__class__)]
+        return [v for v in self.data.values() if not isinstance(v, IsConfiguration)]
 
     @property
     def entry_keys(self) -> List[str]:
@@ -241,34 +266,30 @@ class Configuration(UserDict):
 
         Only actual keys are included, not subsections.
         """
-        return [k for k, v in self.data.items() if not isinstance(v, self.__class__)]
+        return [k for k, v in self.data.items() if not isinstance(v, IsConfiguration)]
 
     @property
     def leafs(self) -> List[Tuple["Configuration", str, Any]]:
-        """Generator of all keys and values, recursively including subsections"""
-        for key, value in self.data.items():
-            if isinstance(value, self.__class__):
-                yield from value.leafs
-            else:
-                yield self, key, value
+        """List of all keys and values, recursively including subsections"""
+        return [lf for lf in self._leafs()]
 
     @property
     def leaf_keys(self) -> List[Tuple["Configuration", str]]:
-        """Generator of all keys in Configuration, recursively including subsections"""
-        for key, value in self.data.items():
-            if isinstance(value, self.__class__):
-                yield from value.leaf_keys
-            else:
-                yield self, key
+        """List of all keys in Configuration, recursively including subsections"""
+        return [(s, k) for s, k, v in self._leafs()]
 
     @property
     def leaf_values(self) -> List[Any]:
-        """Generator of values in Configuration, recursively including subsections"""
+        """List of all values in Configuration, recursively including subsections"""
+        return [v for s, k, v in self._leafs()]
+
+    def _leafs(self) -> List[Tuple["Configuration", str, Any]]:
+        """Generator of all keys and values, recursively including subsections"""
         for key, value in self.data.items():
-            if isinstance(value, self.__class__):
-                yield from value.leaf_values
+            if isinstance(value, IsConfiguration):
+                yield from value._leafs()
             else:
-                yield value
+                yield self, key, value
 
     @property
     def sources(self):
@@ -329,7 +350,7 @@ class Configuration(UserDict):
         """Convert Configuration to a nested dictionary"""
         dct_data = {**self.data, **other_fields}
         return {
-            k: v.as_dict() if isinstance(v, self.__class__) else v
+            k: v.as_dict() if isinstance(v, IsConfiguration) else v
             for k, v in dct_data.items()
         }
 
@@ -339,15 +360,16 @@ class Configuration(UserDict):
         *,
         indent: int = 2,
         key_width: int = 20,
+        skip_header: bool = False,
         **writer_args: Any,
     ) -> str:
         """Represent Configuration as a string, heavily inspired by TOML"""
         if format is not None:
             return writers.as_str(format, config=self.as_dict(), **writer_args)
 
-        lines = [] if self.name is None else [f"[{self.name}]"]
+        lines = [] if self.name is None or skip_header else [f"[{self.name}]"]
         for key, value in self.data.items():
-            if isinstance(value, self.__class__):
+            if isinstance(value, IsConfiguration):
                 value_str = value.as_str(indent=indent, key_width=key_width)
                 lines.append("\n" + textwrap.indent(value_str, " " * indent))
             else:
@@ -521,6 +543,119 @@ class Configuration(UserDict):
         return self.as_str()
 
 
+class ConfigurationList(UserList, IsConfiguration):
+    """Collect a list of Configurations in one object"""
+
+    def __init__(
+        self, name: Optional[str] = None, _vars: Optional[Dict[str, str]] = None
+    ) -> None:
+        """Create an empty configuration"""
+        super().__init__()
+        self.name = name
+        self.vars = {} if _vars is None else _vars
+        self._source = []
+
+    @classmethod
+    def from_list(
+        cls, entries: List[Any], *, name: Optional[str] = None, source: str = ""
+    ) -> "ConfigurationList":
+        """Create a ConfigurationList from a list"""
+        cfg = cls(name=name)
+        cfg.update_from_list(entries, source=source)
+        return cfg
+
+    def update_entry(self, value: Any, source: str = "") -> None:
+        """Add one entry to the configuration list"""
+        # Treat dicts as nested configurations
+        if isinstance(value, dict):
+            value = Configuration.from_dict(value, name=self.name, source=source)
+            source = value._source
+
+        # Treat lists with nested elements as configuration lists
+        elif isinstance(value, list) and _is_nested(value):
+            value = ConfigurationList.from_list(value, name=self.name, source=source)
+            source = value._source
+
+        # Add entry to configuration list
+        self.data.append(value)
+        self._source.append(source)
+
+    def update_from_list(self, entries: List[Any], source: str = "") -> None:
+        """Update the configuration list from a list"""
+        for entry in entries:
+            self.update_entry(entry, source=source)
+
+    def _flatten_section(self) -> List[Tuple[str, "Configuration"]]:
+        """Return configuration as lists of (name, Configuration) tuple"""
+        return [(s.name, s) for s in self.data]
+
+    @property
+    def leafs(self) -> List[Tuple["Configuration", str, Any]]:
+        """List of all keys and values, recursively including subsections"""
+        return [lf for lf in self._leafs()]
+
+    @property
+    def leaf_keys(self) -> List[Tuple["Configuration", str]]:
+        """List of all keys in Configuration, recursively including subsections"""
+        return [(s, k) for s, k, v in self._leafs()]
+
+    @property
+    def leaf_values(self) -> List[Any]:
+        """List of all values in Configuration, recursively including subsections"""
+        return [v for s, k, v in self._leafs()]
+
+    def _leafs(self) -> List[Tuple["Configuration", str, Any]]:
+        """Generator of all keys and values, recursively including subsections"""
+        for value in self:
+            if isinstance(value, IsConfiguration):
+                yield from value._leafs()
+            else:
+                yield self, self.name, value
+
+    def as_dict(self) -> List[Any]:
+        """Convert ConfigurationList to a nested dictionary"""
+        return [v.as_dict() if isinstance(v, IsConfiguration) else v for v in self.data]
+
+    def as_str(self, *, indent: int = 2, key_width: int = 20) -> str:
+        """Represent configuration list as a string"""
+        lines = []
+        for value in self.data:
+            lines.append(f"\n[[{self.name}]]")
+            if isinstance(value, IsConfiguration):
+                value_str = value.as_str(
+                    indent=indent, key_width=key_width, skip_header=True
+                )
+                lines.append(value_str)
+            else:
+                lines.append(f"{_repr_toml(value)}")
+        return "\n".join(lines).strip()
+
+    #
+    # Dunder methods
+    #
+    def __getattr__(self, key: str) -> Union["ConfigurationList", Any]:
+        """Include attributes available on all entries"""
+        try:
+            return self.from_list(getattr(entry, key) for entry in self.data)
+        except AttributeError:
+            raise AttributeError(
+                f"{self.__class__.__name__!r} object has no attribute {key!r}"
+            ) from None
+
+    def __getitem__(self, key: Union[int, str]) -> Union["ConfigurationList", Any]:
+        """Include items available on all entries"""
+        try:
+            return super().__getitem__(key)
+        except TypeError:
+            try:
+                return self.from_list(entry[key] for entry in self.data)
+            except KeyError:
+                raise AttributeError(
+                    f"All items in ConfigurationList {self.name} "
+                    f"don't have entry {key!r}"
+                ) from None
+
+
 def _replace(
     string: str, replace_vars: Dict[str, str], default: Optional[str] = None
 ) -> str:
@@ -589,3 +724,8 @@ def _repr_toml(value: Any) -> str:
         return f"[{', '.join(_repr_toml(v) for v in value)}]"
 
     return str(value)
+
+
+def _is_nested(sequence) -> bool:
+    """Check if the sequence contains nested lists or dictionaries"""
+    return any(isinstance(s, (dict, list, IsConfiguration)) for s in sequence)

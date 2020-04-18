@@ -1,0 +1,14 @@
+name: pyconfs
+format: yaml
+dependencies:
+  - name: python
+    url: https://www.python.org/
+    versions:
+      - 3.6
+      - 3.7
+      - 3.8
+  - name: pyplugs
+    url: https://pyplugs.readthedocs.io
+author:
+  firstname: Geir Arne
+  lastname: Hjelle
