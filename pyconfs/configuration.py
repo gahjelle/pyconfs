@@ -210,7 +210,8 @@ class Configuration(UserDict, IsConfiguration):
 
         Only actual sections are included, not top level entries.
         """
-        return [(n, s) for n, s in self.data.items() if isinstance(s, self.__class__)]
+        # return list(self._section_items())
+        return [s for s in self._section_items()]
 
     @property
     def sections(self) -> List["Configuration"]:
@@ -218,7 +219,7 @@ class Configuration(UserDict, IsConfiguration):
 
         Only actual sections are included, not top level entries.
         """
-        return [s for s in self.data.values() if isinstance(s, self.__class__)]
+        return [s for n, s in self._section_items()]
 
     @property
     def section_names(self) -> List[str]:
@@ -226,7 +227,20 @@ class Configuration(UserDict, IsConfiguration):
 
         Only actual sections are included, not top level entries.
         """
-        return [n for n, s in self.data.items() if isinstance(s, self.__class__)]
+        return [n for n, s in self._section_items()]
+
+    def _section_items(self) -> List[Tuple[str, "Configuration"]]:
+        """Generator of section names and sections in Configuration
+
+        Only actual sections are included, not top level entries.
+        """
+        for section in self.data.values():
+            if isinstance(section, IsConfiguration):
+                yield from section._flatten_section()
+
+    def _flatten_section(self) -> List[Tuple[str, "Configuration"]]:
+        """Return configuration as a (name, Configuration) tuple"""
+        return [(self.name, self)]
 
     @property
     def entries(self) -> List[Tuple[str, Any]]:
@@ -235,7 +249,7 @@ class Configuration(UserDict, IsConfiguration):
         Only actual entries are included, not subsections.
         """
         return [
-            (k, v) for k, v in self.data.items() if not isinstance(v, self.__class__)
+            (k, v) for k, v in self.data.items() if not isinstance(v, IsConfiguration)
         ]
 
     @property
@@ -244,7 +258,7 @@ class Configuration(UserDict, IsConfiguration):
 
         Only actual values are included, not subsections.
         """
-        return [v for v in self.data.values() if not isinstance(v, self.__class__)]
+        return [v for v in self.data.values() if not isinstance(v, IsConfiguration)]
 
     @property
     def entry_keys(self) -> List[str]:
@@ -252,34 +266,30 @@ class Configuration(UserDict, IsConfiguration):
 
         Only actual keys are included, not subsections.
         """
-        return [k for k, v in self.data.items() if not isinstance(v, self.__class__)]
+        return [k for k, v in self.data.items() if not isinstance(v, IsConfiguration)]
 
     @property
     def leafs(self) -> List[Tuple["Configuration", str, Any]]:
-        """Generator of all keys and values, recursively including subsections"""
-        for key, value in self.data.items():
-            if isinstance(value, self.__class__):
-                yield from value.leafs
-            else:
-                yield self, key, value
+        """List of all keys and values, recursively including subsections"""
+        return [lf for lf in self._leafs()]
 
     @property
     def leaf_keys(self) -> List[Tuple["Configuration", str]]:
-        """Generator of all keys in Configuration, recursively including subsections"""
-        for key, value in self.data.items():
-            if isinstance(value, self.__class__):
-                yield from value.leaf_keys
-            else:
-                yield self, key
+        """List of all keys in Configuration, recursively including subsections"""
+        return [(s, k) for s, k, v in self._leafs()]
 
     @property
     def leaf_values(self) -> List[Any]:
-        """Generator of values in Configuration, recursively including subsections"""
+        """List of all values in Configuration, recursively including subsections"""
+        return [v for s, k, v in self._leafs()]
+
+    def _leafs(self) -> List[Tuple["Configuration", str, Any]]:
+        """Generator of all keys and values, recursively including subsections"""
         for key, value in self.data.items():
-            if isinstance(value, self.__class__):
-                yield from value.leaf_values
+            if isinstance(value, IsConfiguration):
+                yield from value._leafs()
             else:
-                yield value
+                yield self, key, value
 
     @property
     def sources(self):
@@ -540,7 +550,6 @@ class ConfigurationList(UserList, IsConfiguration):
         self, name: Optional[str] = None, _vars: Optional[Dict[str, str]] = None
     ) -> None:
         """Create an empty configuration"""
-        print(f"Creating {self.__class__.__name__}(name={name})")
         super().__init__()
         self.name = name
         self.vars = {} if _vars is None else _vars
@@ -557,25 +566,51 @@ class ConfigurationList(UserList, IsConfiguration):
 
     def update_entry(self, value: Any, source: str = "") -> None:
         """Add one entry to the configuration list"""
+        # Treat dicts as nested configurations
         if isinstance(value, dict):
-            # Treat dicts as nested configurations
-            name = self.name
-            entry = Configuration.from_dict(value, name=name, source=source)
-            self.data.append(entry)
-            self._source.append(entry._source)
-        elif isinstance(value, list):
-            name = self.name
-            entry = ConfigurationList.from_list(value, name=name, source=source)
-            self.data.append(entry)
-            self._source.append(entry._source)
-        else:
-            self.data.append(value)
-            self._source.append(source)
+            value = Configuration.from_dict(value, name=self.name, source=source)
+            source = value._source
+
+        # Treat lists with nested elements as configuration lists
+        elif isinstance(value, list) and _is_nested(value):
+            value = ConfigurationList.from_list(value, name=self.name, source=source)
+            source = value._source
+
+        # Add entry to configuration list
+        self.data.append(value)
+        self._source.append(source)
 
     def update_from_list(self, entries: List[Any], source: str = "") -> None:
         """Update the configuration list from a list"""
         for entry in entries:
             self.update_entry(entry, source=source)
+
+    def _flatten_section(self) -> List[Tuple[str, "Configuration"]]:
+        """Return configuration as lists of (name, Configuration) tuple"""
+        return [(s.name, s) for s in self.data]
+
+    @property
+    def leafs(self) -> List[Tuple["Configuration", str, Any]]:
+        """List of all keys and values, recursively including subsections"""
+        return [lf for lf in self._leafs()]
+
+    @property
+    def leaf_keys(self) -> List[Tuple["Configuration", str]]:
+        """List of all keys in Configuration, recursively including subsections"""
+        return [(s, k) for s, k, v in self._leafs()]
+
+    @property
+    def leaf_values(self) -> List[Any]:
+        """List of all values in Configuration, recursively including subsections"""
+        return [v for s, k, v in self._leafs()]
+
+    def _leafs(self) -> List[Tuple["Configuration", str, Any]]:
+        """Generator of all keys and values, recursively including subsections"""
+        for value in self:
+            if isinstance(value, IsConfiguration):
+                yield from value._leafs()
+            else:
+                yield self, self.name, value
 
     def as_dict(self) -> List[Any]:
         """Convert ConfigurationList to a nested dictionary"""
