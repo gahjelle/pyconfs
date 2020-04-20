@@ -234,13 +234,14 @@ class Configuration(UserDict, IsConfiguration):
 
         Only actual sections are included, not top level entries.
         """
-        for section in self.data.values():
+        for section_name, section in self.data.items():
             if isinstance(section, IsConfiguration):
-                yield from section._flatten_section()
+                for flattened_section in section._flatten_section():
+                    yield section_name, flattened_section
 
-    def _flatten_section(self) -> List[Tuple[str, "Configuration"]]:
-        """Return configuration as a (name, Configuration) tuple"""
-        return [(self.name, self)]
+    def _flatten_section(self) -> List["Configuration"]:
+        """Return configuration as a list of one configuration"""
+        return [self]
 
     @property
     def entries(self) -> List[Tuple[str, Any]]:
@@ -585,9 +586,9 @@ class ConfigurationList(UserList, IsConfiguration):
         for entry in entries:
             self.update_entry(entry, source=source)
 
-    def _flatten_section(self) -> List[Tuple[str, "Configuration"]]:
-        """Return configuration as lists of (name, Configuration) tuple"""
-        return [(s.name, s) for s in self.data]
+    def _flatten_section(self) -> List["Configuration"]:
+        """Return configuration as a list of Configurations"""
+        return self.data
 
     @property
     def leafs(self) -> List[Tuple["Configuration", str, Any]]:
