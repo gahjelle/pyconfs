@@ -102,12 +102,12 @@ class Configuration(UserDict, IsConfiguration):
         name = key if self.name is None else f"{self.name}.{key}"
 
         # Treat dicts as nested configurations
-        if isinstance(value, dict):
+        if isinstance(value, (dict, UserDict)):
             self.data.setdefault(key, self.__class__(name=name, _vars=self.vars))
             self.data[key].update_from_dict(value, source=source)
 
         # Treat lists with nested elements as configuration lists
-        elif isinstance(value, list) and _is_nested(value):
+        elif isinstance(value, (list, UserList)) and _is_nested(value):
             self.data.setdefault(key, ConfigurationList(name=name, _vars=self.vars))
             self.data[key].update_from_list(value, source=source)
 
@@ -210,8 +210,7 @@ class Configuration(UserDict, IsConfiguration):
 
         Only actual sections are included, not top level entries.
         """
-        # return list(self._section_items())
-        return [s for s in self._section_items()]
+        return list(self._section_items())
 
     @property
     def sections(self) -> List["Configuration"]:
@@ -272,7 +271,7 @@ class Configuration(UserDict, IsConfiguration):
     @property
     def leafs(self) -> List[Tuple["Configuration", str, Any]]:
         """List of all keys and values, recursively including subsections"""
-        return [lf for lf in self._leafs()]
+        return list(self._leafs())
 
     @property
     def leaf_keys(self) -> List[Tuple["Configuration", str]]:
@@ -593,7 +592,7 @@ class ConfigurationList(UserList, IsConfiguration):
     @property
     def leafs(self) -> List[Tuple["Configuration", str, Any]]:
         """List of all keys and values, recursively including subsections"""
-        return [lf for lf in self._leafs()]
+        return list(self._leafs())
 
     @property
     def leaf_keys(self) -> List[Tuple["Configuration", str]]:
