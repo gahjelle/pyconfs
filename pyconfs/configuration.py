@@ -55,6 +55,8 @@ class Configuration(UserDict, IsConfiguration):
             See https://github.com/kartverket/midgard
     """
 
+    __slots__ = ("data", "name", "vars", "_source")
+
     def __init__(
         self, name: Optional[str] = None, _vars: Optional[Dict[str, str]] = None
     ) -> None:
@@ -530,6 +532,18 @@ class Configuration(UserDict, IsConfiguration):
             raise AttributeError(
                 f"Configuration {self.name} has no entry {key!r}"
             ) from None
+
+    def __setattr__(self, key: str, value: Any) -> None:
+        """Update an entry using assignment syntax on attributes"""
+        if key in self.__slots__:
+            # Update regular attributes as normal
+            super().__setattr__(key, value)
+        else:
+            self.update_entry(key=key, value=value)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        """Update an entry using assignment syntax on items"""
+        self.update_entry(key=key, value=value)
 
     def __repr__(self):
         """Simple representation of a Configuration"""
