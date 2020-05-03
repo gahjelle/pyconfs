@@ -1,7 +1,8 @@
-"""A PyConfs Configuration object
+"""A PyConfs Configuration
 
-The `Configuration` is a collection of `ConfigurationEntry` objects. Entries can
-be grouped inside nested Configurations as well.
+The `Configuration` is a dictionary structure containing configuration entries,
+possibly nested inside sections. Each section is its own `Configuration` as
+well.
 """
 
 # Standard library imports
@@ -11,7 +12,7 @@ import pathlib
 import re
 import textwrap
 import warnings
-from collections import UserDict, UserList
+from collections import UserDict, UserList, UserString
 from datetime import date, datetime
 from typing import (
     Any,
@@ -28,9 +29,6 @@ from typing import (
 
 # PyConfs imports
 from pyconfs import _converters, _exceptions, readers, writers
-
-# Marker for missing keys
-MISSING = object()
 
 
 def _dispatch_to(converter):
@@ -51,6 +49,12 @@ class IsConfiguration:
 
 
 class Configuration(UserDict, IsConfiguration):
+    """Consistent handling of configuration formats
+
+    Credit: Originally written for `midgard.config.Configuration`.
+            See https://github.com/kartverket/midgard
+    """
+
     def __init__(
         self, name: Optional[str] = None, _vars: Optional[Dict[str, str]] = None
     ) -> None:
@@ -328,23 +332,19 @@ class Configuration(UserDict, IsConfiguration):
         **replace_vars: str,
     ) -> Any:
         """Replace values in an entry based on {} format strings"""
-        all_vars = {**self.vars, **replace_vars}
-        value = self.get(key, MISSING)
-        if value is MISSING:
-            raise KeyError(key)
+        all_vars = Variables(**self.vars, **replace_vars, default=default)
+        value = textwrap.dedent(self.data[key]) if dedent else self.data[key]
 
         # Replace variables
-        value = textwrap.dedent(value) if dedent else value
-        replaced = _replace(value, replace_vars=all_vars, default=default)
+        replaced = value.format_map(all_vars)
 
         # Optionally convert value to a different data type
-        if converter is not None:
-            if callable(converter):
-                replaced = converter(replaced)
-            else:
-                replaced = _converters.convert(f"to_{converter}", value=replaced)
-
-        return replaced
+        if converter is None:
+            return replaced
+        elif callable(converter):
+            return converter(replaced)
+        else:
+            return _converters.convert(f"to_{converter}", value=replaced)
 
     def as_dict(self, **other_fields: Any) -> Dict[str, Any]:
         """Convert Configuration to a nested dictionary"""
@@ -656,48 +656,51 @@ class ConfigurationList(UserList, IsConfiguration):
                 ) from None
 
 
-def _replace(
-    string: str, replace_vars: Dict[str, str], default: Optional[str] = None
-) -> str:
-    """Replace format style variables in a string
+class Variables(UserDict):
+    """Dictionary that allows more flexible format style replacements
 
-    Handles nested replacements by first replacing the replace_vars. Format
-    specifiers (after colon, :) are allowed, but can not contain nested format
-    strings.
+    Instead of using str.format(**dict), you can use str.format_map(Variables)
 
-    This function is used instead of str.format for three reasons. It handles:
+    This will handle:
     - that not all pairs of {...} are replaced at once
     - optional default values for variables that are not specified
     - nested replacements where values of replace_vars may be replaced
       themselves
-
-    Credit: Originally written for `midgard.config.Configuration`.
-            See https://github.com/kartverket/midgard
-
-    Args:
-        string:        Original string
-        replace_vars:  Variables that can be replaced
-        default:       Optional default value used for vars not in replace_vars.
     """
-    matches = re.finditer(r"\{(\w+)(:[^\{\}]*)?\}", string)
-    for match in matches:
-        var = match.group(1)
-        var_expr = match.string[slice(*match.span())]
-        replacement = replace_vars.get(var)
-        if replacement is None:
-            # Default replacements
-            if default is None:
-                continue
-            replacement = default
+
+    def __init__(self, default=None, **vars):
+        """Store optional default value"""
+        super().__init__(**vars)
+        self.default = default
+
+    def __getitem__(self, key):
+        """Handle nested replacements"""
+        value = super().__getitem__(key)
+
+        # Nested replacement for strings
+        if isinstance(value, str):
+            return value.format_map(self)
         else:
-            # Nested replacements
-            if isinstance(replacement, str):
-                replacement = _replace(replacement, replace_vars, default)
+            return value
 
-        # Use str.format to handle format specifiers
-        string = string.replace(var_expr, var_expr.format(**{var: replacement}))
+    def __missing__(self, key):
+        """Handle missing variables"""
+        return UnsetVariable(key) if self.default is None else self.default
 
-    return string
+
+class UnsetVariable(UserString):
+    """Variable that does not have a value yet, used by Variables"""
+
+    def __format__(self, fmt):
+        """Keep the formatting string"""
+        if fmt:
+            return f"{{{self.data}:{fmt}}}"
+        else:
+            return str(self)
+
+    def __str__(self):
+        """Represent unset variables by adding curly braces that can be parsed later"""
+        return f"{{{self.data}}}"
 
 
 def _repr_toml(value: Any) -> str:
