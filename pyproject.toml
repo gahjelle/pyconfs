@@ -1,6 +1,6 @@
 [build-system]
-requires           = ["flit"]
-build-backend      = "flit.buildapi"
+requires = ["flit_core >=2,<4"]
+build-backend = "flit_core.buildapi"
 
 
 [tool.flit.metadata]
@@ -49,4 +49,4 @@ ignore-semiprivate = false
 ignore-private = false
 ignore-module = false
 fail-under = 100
-verbose = 1
+verbose = 0
