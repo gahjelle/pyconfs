@@ -49,4 +49,4 @@ ignore-semiprivate = false
 ignore-private = false
 ignore-module = false
 fail-under = 100
-verbose = 1
+verbose = 0
