@@ -15,6 +15,7 @@ class FuturePackage:
     _pip_names = {"toml": "toml", "yaml": "PyYAML"}
 
     def __init__(self, package_name: str) -> None:
+        """Store reference to package name, to allow future import"""
         self._package_name = package_name
         self._package_obj: Optional[ModuleType] = None
 

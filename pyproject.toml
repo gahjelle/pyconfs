@@ -23,7 +23,7 @@ classifiers        = [
     "Programming Language :: Python :: 3.9",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-keywords           = "configuration ini toml yml"
+keywords           = "configuration ini json toml yml"
 
 # Requirements
 requires-python    = ">=3.6"
@@ -36,6 +36,17 @@ requires           = [
 [tool.flit.metadata.requires-extra]
 toml               = ["toml"]
 yaml               = ["PyYAML"]
-dev                = ["black", "bumpversion", "flake8", "flit", "isort", "mypy", "pre-commit"]
+dev                = ["black", "bumpversion", "flake8", "flit", "interrogate", "isort", "mypy", "pre-commit"]
 doc                = ["mkdocs"]
-test               = ["black", "flake8", "isort", "mypy", "pytest", "pytest-cov", "tox"]
+test               = ["black", "flake8", "interrogate", "isort", "mypy", "pytest", "pytest-cov", "tox"]
+
+
+[tool.interrogate]
+ignore-init-method = false
+ignore-init-module = false
+ignore-magic = false
+ignore-semiprivate = false
+ignore-private = false
+ignore-module = false
+fail-under = 100
+verbose = 1

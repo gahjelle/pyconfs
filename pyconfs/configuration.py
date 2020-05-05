@@ -32,11 +32,17 @@ from pyconfs import _converters, _exceptions, readers, writers
 
 
 def _dispatch_to(converter):
-    """Decorator for dispatching methods to converter functions"""
+    """Decorator for dispatching methods to converter functions
+
+    This outer closure stores the converter parameter.
+    """
 
     def _decorator_dispatch_to(func):
+        """Decorate the given function"""
+
         @functools.wraps(func)
         def _wrapper_dispatch_to(self, key: str, **options):
+            """Call the converter function"""
             return converter(value=func(self, key), **options)
 
         return _wrapper_dispatch_to
@@ -526,6 +532,7 @@ class Configuration(UserDict, IsConfiguration):
         return list(super().__dir__()) + list(self.data.keys())
 
     def __getattr__(self, key: str) -> Union["Configuration", Any]:
+        """Get sections and keys using attribute (dot) syntax"""
         try:
             return self[key]
         except KeyError:
