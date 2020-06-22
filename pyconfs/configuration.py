@@ -132,6 +132,11 @@ class Configuration(UserDict, IsConfiguration):
         for key, value in entries.items():
             self.update_entry(key=key, value=value, source=source)
 
+    def update_from_config(
+        self, key: str, config: IsConfiguration, source: str = ""
+    ) -> None:
+        """Update the configuration from another configuration"""
+
     def update_from_env(
         self,
         env_paths: Dict[str, Sequence[str]],
@@ -201,6 +206,60 @@ class Configuration(UserDict, IsConfiguration):
         entries = readers.from_str(format, string=string)
         self.update_from_dict(entries, source=source)
 
+    def copy_section(
+        self, from_name: Union[str, List[str]], to_name: Union[str, List[str]]
+    ) -> None:
+        """Copy one section into another, nested sections can be specified as lists"""
+
+        # Get section to copy from, allow nested names
+        section = self.get(from_name)
+        if not isinstance(section, IsConfiguration):
+            raise TypeError(f"{_dotted_name(from_name)} is not a section")
+
+        # Get section to copy to, allow nested names
+        destination = self.get(to_name)
+        if not isinstance(destination, IsConfiguration):
+            raise TypeError(f"{_dotted_name(to_name)} is not a section")
+
+        # Copy section
+        destination.update_entry(
+            key=section.name_stem, value=section, source=f"Copy of {section.name}"
+        )
+
+    def copy_default_section(
+        self, default_name: Union[str, List[str]], copy_recursively: bool = False
+    ) -> None:
+        """Copy contents of one section into all other sections"""
+
+        # Get section to copy from, allow nested names
+        default = self.get(default_name)
+        if not isinstance(default, IsConfiguration):
+            raise TypeError(f"{_dotted_name(default_name)} is not a section")
+
+        # Copy section to all other sections
+        for destination in self.sections:
+            if destination.name == default.name:
+                continue
+
+            if copy_recursively:
+                destination._copy_recursively(default)
+            else:
+                destination.update_entry(
+                    key=default.name_stem,
+                    value=default,
+                    source=f"Copy of {default.name}",
+                )
+
+    def _copy_recursively(self, section: IsConfiguration) -> None:
+        """Copy the given section to all subsections of Configuration recursively"""
+        for destination in self.sections:
+            if destination.name == section.name:
+                continue
+            destination._copy_recursively(section)
+        self.update_entry(
+            key=section.name_stem, value=section, source=f"Copy of {section.name}"
+        )
+
     def get(self, key, default=None):
         """Get a value from the configuration, allow nested keys"""
         if isinstance(key, list):
@@ -215,6 +274,14 @@ class Configuration(UserDict, IsConfiguration):
                 return value
         else:
             return super().get(key, default)
+
+    @property
+    def name_stem(self) -> str:
+        """Part of name after last dot"""
+        if self.name is None:
+            return ""
+
+        return self.name.rpartition(".")[-1]
 
     @property
     def section_items(self) -> List[Tuple[str, "Configuration"]]:
@@ -610,6 +677,24 @@ class ConfigurationList(UserList, IsConfiguration):
         """Return configuration as a list of Configurations"""
         return self.data
 
+    def get(self, key, default=None):
+        """Get an entry from the ConfigurationList, allow nested keys"""
+        if isinstance(key, list):
+            first_key, *tail_keys = key
+            value = self.get(first_key, default)
+            if tail_keys:
+                try:
+                    return value.get(list(tail_keys), default)
+                except AttributeError:
+                    return default
+            else:
+                return value
+        else:
+            try:
+                return self[key]
+            except (IndexError, AttributeError):
+                return default
+
     @property
     def leafs(self) -> List[Tuple["Configuration", str, Any]]:
         """List of all keys and values, recursively including subsections"""
@@ -753,3 +838,11 @@ def _repr_toml(value: Any) -> str:
 def _is_nested(sequence) -> bool:
     """Check if the sequence contains nested lists or dictionaries"""
     return any(isinstance(s, (dict, list, IsConfiguration)) for s in sequence)
+
+
+def _dotted_name(nested_name) -> str:
+    """Convert a nested name (with list) to dotted name"""
+    if isinstance(nested_name, list):
+        return ".".join(str(name) for name in nested_name)
+    else:
+        return nested_name
