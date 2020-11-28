@@ -34,26 +34,25 @@ def as_named_tuple(
 
     # Create a NamedTuple template based on the current data in the Configuration
     if template is None:
-        template = NamedTuple(
-            self.name, fields=[(k, type(v)) for k, v in tpl_data.items()]
-        )
+        template = NamedTuple(self.name, **{k: type(v) for k, v in tpl_data.items()})
 
     # Use NamedTuple to validate fields
     try:
         tpl = template(**tpl_data)
     except TypeError as err:
         # Rewrite the error message if fields are missing
-        message = err.args[0].replace("__new__()", f"Configuration {self.name!r}")
+        name = f"Configuration {self.name!r}"
+        message = err.args[0].replace("__new__()", name).replace("<lambda>()", name)
         field = (re.findall(r"'([^']+)'$", message) or ["__no_field_found__"]).pop()
         message += f" ({self._get_source_string(field, src_map.get(field))})"
         err.args = (message, *err.args[1:])
         raise
 
     # Check that types are correct
-    if not hasattr(tpl, "_field_types"):
+    if not hasattr(tpl, "__annotations__"):
         return tpl
 
-    for field, field_type in tpl._field_types.items():
+    for field, field_type in tpl.__annotations__.items():
         if field not in tpl_data:
             continue
 
