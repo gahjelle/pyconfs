@@ -1,0 +1,26 @@
+name: unit_tests
+on: [push]
+
+jobs:
+  run_tests:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - { name: Linux-Py36, python: "3.6", os: ubuntu-latest, tox: py }
+          - { name: Linux-Py37, python: "3.7", os: ubuntu-latest, tox: py }
+          - { name: Linux-Py38, python: "3.8", os: ubuntu-latest, tox: py }
+          - { name: Linux-Py39, python: "3.9", os: ubuntu-latest, tox: py }
+          - { name: Style, python: "3.9", os: ubuntu-latest, tox: style }
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install Tox
+        run: pip install tox
+      - name: Run Tox
+        run: tox -e ${{ matrix.tox }}

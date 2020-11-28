@@ -10,8 +10,10 @@ from pyconfs._exceptions import UnknownFormat
 
 # Fall back on backport of importlib.resources
 try:
+    # Standard library imports
     from importlib import resources
 except ImportError:
+    # Third party imports
     import importlib_resources as resources
 
 
