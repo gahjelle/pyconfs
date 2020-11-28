@@ -1,8 +1,13 @@
 """Test reading of configuration files"""
 
-from pyconfs import Configuration
+# Standard library imports
 import pathlib
+
+# Third party imports
 import pytest
+
+# PyConfs imports
+from pyconfs import Configuration
 
 
 @pytest.fixture
