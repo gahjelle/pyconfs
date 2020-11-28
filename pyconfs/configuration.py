@@ -9,26 +9,14 @@ well.
 import functools
 import os
 import pathlib
-import re
 import textwrap
 import warnings
 from collections import UserDict, UserList, UserString
 from datetime import date, datetime
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    List,
-    NamedTuple,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Union,
-)
+from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Tuple, Union
 
 # PyConfs imports
-from pyconfs import _converters, _exceptions, readers, writers
+from pyconfs import _converters, _exceptions, _types, readers, writers
 
 
 def _dispatch_to(converter):
@@ -467,64 +455,6 @@ class Configuration(UserDict, IsConfiguration):
             **writer_args,
         )
 
-    def as_named_tuple(
-        self, template: Optional[NamedTuple] = None, **other_fields: Any
-    ) -> NamedTuple:
-        """Convert Configuration to a named tuple
-
-        If a typed NamedTuple is given as a template, then the configuration
-        will be validated against that template.
-
-        Any other fields that are supplied will be added to the named tuple in
-        addition to the data in the configuration.
-        """
-        tpl_data = {**self.data, **other_fields}
-        src_map = {
-            k: None if k in self.data else f"{k}={v!r}" for k, v in tpl_data.items()
-        }
-
-        # Create a NamedTuple template based on the current data in the Configuration
-        if template is None:
-            template = NamedTuple(
-                self.name, fields=[(k, type(v)) for k, v in tpl_data.items()]
-            )
-
-        # Use NamedTuple to validate fields
-        try:
-            tpl = template(**tpl_data)
-        except TypeError as err:
-            # Rewrite the error message if fields are missing
-            message = err.args[0].replace("__new__()", f"Configuration {self.name!r}")
-            field = (re.findall(r"'([^']+)'$", message) or ["__no_field_found__"]).pop()
-            message += f" ({self._get_source_string(field, src_map.get(field))})"
-            err.args = (message, *err.args[1:])
-            raise
-
-        # Check that types are correct
-        if not hasattr(tpl, "_field_types"):
-            return tpl
-
-        for field, field_type in tpl._field_types.items():
-            if field not in tpl_data:
-                continue
-
-            try:
-                is_correct_type = isinstance(tpl_data[field], field_type)
-            except TypeError:
-                # Not all types (e.g. subscripted generics) support isinstance checks
-                continue
-
-            if not is_correct_type:
-                message = (
-                    f"Configuration {self.name} got {type(tpl_data[field]).__name__!r} "
-                    f"type for field {field}. "
-                    f"{template.__name__} requires {field_type.__name__!r} "
-                    f"({self._get_source_string(field, src_map.get(field))})"
-                )
-                raise TypeError(message)
-
-        return tpl
-
     #
     # Add converters used to convert entries to certain types
     #
@@ -629,6 +559,10 @@ class Configuration(UserDict, IsConfiguration):
     def __str__(self):
         """Full representation of a Configuration"""
         return self.as_str()
+
+
+# Add converters to other types to Configuration
+_types.add_to_class(Configuration)
 
 
 class ConfigurationList(UserList, IsConfiguration):
