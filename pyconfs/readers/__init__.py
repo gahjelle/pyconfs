@@ -4,7 +4,7 @@
 
 # Standard library imports
 import pathlib
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 # Third party imports
 import pyplugs
@@ -21,7 +21,7 @@ def from_file(
     file_format: Optional[str] = None,
     encoding: str = "utf-8",
     **reader_args: Any
-) -> Dict[str, Any]:
+) -> Tuple[str, Dict[str, Any]]:
     """Read a configuration from file with the given format
 
     If the file format is not specified, it is deduced from the file path suffix.
@@ -29,6 +29,6 @@ def from_file(
     file_format = (
         formats.guess_format(file_path) if file_format is None else file_format
     )
-    return from_str(
+    return file_format, from_str(
         file_format, string=file_path.read_text(encoding=encoding), **reader_args
     )

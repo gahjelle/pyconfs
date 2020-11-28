@@ -190,11 +190,11 @@ class Configuration(UserDict, IsConfiguration):
     ) -> None:
         """Update the configuration from a file"""
         file_path = pathlib.Path(file_path)
-        entries = readers.from_file(
+        file_format, entries = readers.from_file(
             file_path=file_path, file_format=file_format, **reader_args
         )
         self.update_from_dict(
-            entries, source=f"{file_path.resolve()} ({file_format} reader)"
+            entries, source=f"{file_path.resolve()} ({file_format.upper()} reader)"
         )
 
     def update_from_str(self, string: str, format: str, *, source=None) -> None:

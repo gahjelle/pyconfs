@@ -32,8 +32,8 @@ _AUTHORS = [
     _Author("Geir Arne Hjelle", "geirarne@gmail.com", _date(2019, 4, 1), _date.max)
 ]
 
-__author__ = ", ".join(a.name for a in _AUTHORS if a.start < _date.today() < a.end)
-__contact__ = ", ".join(a.email for a in _AUTHORS if a.start < _date.today() < a.end)
+__author__ = ", ".join(a.name for a in _AUTHORS if a.start <= _date.today() <= a.end)
+__contact__ = ", ".join(a.email for a in _AUTHORS if a.start <= _date.today() <= a.end)
 
 
 # Update doc with info about maintainers
@@ -48,7 +48,7 @@ def _update_doc(doc: str) -> str:
     """
     # Maintainers
     maintainer_list = [
-        f"+ {a.name} <{a.email}>" for a in _AUTHORS if a.start < _date.today() < a.end
+        f"+ {a.name} <{a.email}>" for a in _AUTHORS if a.start <= _date.today() <= a.end
     ]
     maintainers = "\n".join(maintainer_list)
 
