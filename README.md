@@ -5,9 +5,8 @@ _Unified handling of configuration files in Python_
 [![Latest version](https://img.shields.io/pypi/v/pyconfs.svg)](https://pypi.org/project/pyconfs/)
 [![Python versions](https://img.shields.io/pypi/pyversions/pyconfs.svg)](https://pypi.org/project/pyconfs/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Checked with mypy](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 [![Interrogate DocStrings](https://github.com/gahjelle/pyconfs/blob/master/docs/images/interrogate_badge.svg)](https://interrogate.readthedocs.io/)
-[![CircleCI](https://circleci.com/gh/gahjelle/pyconfs.svg?style=shield)](https://circleci.com/gh/gahjelle/pyconfs)
+[![unit_tests](https://github.com/gahjelle/pyconfs/workflows/unit_tests/badge.svg)](https://github.com/gahjelle/pyconfs/actions)
 
 ## Installing PyConfs
 
@@ -18,7 +17,17 @@ PyConfs is available at [PyPI](https://pypi.org/project/pyconfs/). You can insta
 
 ## Using PyConfs
 
-...
+A **PyConfs Configuration** is a dictionary-like object that unifies several different configuration file formats, including INI, JSON, TOML, and YAML.
+
+**Read a configuration from file**:
+
+    from pyconfs import Configuration
+    cfg = Configuration.from_file("sample.json")
+
+**Access entries in a configuration**:
+
+    package_name = cfg.name
+    first_name = cfg.author.firstname
 
 
 ## Installing From Source
