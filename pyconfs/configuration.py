@@ -194,20 +194,26 @@ class Configuration(UserDict, IsConfiguration):
         entries = readers.from_str(format, string=string)
         self.update_from_dict(entries, source=source)
 
-    def get(self, key, default=None):
+    def get(self, key, default=None, strict=False):
         """Get a value from the configuration, allow nested keys"""
         if isinstance(key, list):
             first_key, *tail_keys = key
-            value = super().get(first_key, default)
+            value = self.get(first_key, default, strict=strict)
             if tail_keys:
                 try:
-                    return value.get(list(tail_keys), default)
+                    return value.get(list(tail_keys), default, strict=strict)
                 except AttributeError:
-                    return default
+                    if strict:
+                        raise KeyError(tail_keys)
+                    else:
+                        return default
             else:
                 return value
         else:
-            return super().get(key, default)
+            if strict:
+                return self.data[key]
+            else:
+                return super().get(key, default)
 
     @property
     def name_stem(self) -> str:
@@ -342,10 +348,19 @@ class Configuration(UserDict, IsConfiguration):
     ) -> Any:
         """Replace values in an entry based on {} format strings"""
         all_vars = Variables(**self.vars, **replace_vars, default=default)
-        value = textwrap.dedent(self.data[key]) if dedent else self.data[key]
+        value = (
+            textwrap.dedent(self.get(key, strict=True))
+            if dedent
+            else self.get(key, strict=True)
+        )
 
         # Replace variables
-        replaced = value.format_map(all_vars)
+        try:
+            replaced = value.format_map(all_vars)
+        except AttributeError:
+            raise _exceptions.ConversionError(
+                f"Only strings can be replaced, not {type(value).__name__!r} "
+            ) from None
 
         # Optionally convert value to a different data type
         if converter is None:
