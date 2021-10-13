@@ -26,7 +26,7 @@ __version__ = "0.5.2"
 __url__ = "https://pyconfs.readthedocs.io/"
 
 
-# Authors/maintainers of Pyplugs
+# Authors/maintainers of PyConfs
 _Author = _namedtuple("_Author", ["name", "email", "start", "end"])
 _AUTHORS = [
     _Author("Geir Arne Hjelle", "geirarne@gmail.com", _date(2019, 4, 1), _date.max)
