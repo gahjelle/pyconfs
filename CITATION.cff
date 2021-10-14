@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "confprint"
+abstract: "Python printer configurations."
+authors:
+  - family-names: "Lie Uberg"
+    given-names: Lewi
+version: 0.1.0
+date-released: 2021-10-13
+repository-code: "https://github.com/lewiuberg/confprint"
+license: MIT
+keywords:
+    - "print"
+    - "printer configurations"
