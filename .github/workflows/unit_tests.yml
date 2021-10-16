@@ -1,5 +1,5 @@
 name: unit_tests
-on: [push]
+on: [push, pull_request]
 
 jobs:
   run_tests:
@@ -12,6 +12,7 @@ jobs:
           - { name: Linux-Py37, python: "3.7", os: ubuntu-latest, tox: py }
           - { name: Linux-Py38, python: "3.8", os: ubuntu-latest, tox: py }
           - { name: Linux-Py39, python: "3.9", os: ubuntu-latest, tox: py }
+          - { name: Linux-Py310, python: "3.10", os: ubuntu-latest, tox: py }
           - { name: Style, python: "3.9", os: ubuntu-latest, tox: style }
     steps:
       - name: Check out code

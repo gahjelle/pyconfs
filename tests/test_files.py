@@ -48,9 +48,7 @@ def test_read_ini_sources(sample_dir):
 @pytest.mark.skip("INI does not yet support advanced reading")
 def test_ini_roundtrip(cfg):
     """Test that a configuration can be recovered after being stored as INI"""
-    roundtripped = Configuration.from_str(
-        cfg.as_str(format="ini"), format="ini"
-    )
+    roundtripped = Configuration.from_str(cfg.as_str(format="ini"), format="ini")
 
     assert roundtripped.as_dict() == cfg.as_dict()
 
@@ -63,6 +61,9 @@ def test_ini_handle_int_key_gracefully(cfg_with_int_key):
 
     # INI converts integer keys to strings
     assert roundtripped.answer.entry_keys == ["42"]
+
+    # Subsections are not properly supported by INI reader
+    # assert roundtripped.long_answer.parts.entry_keys == ["1", "2"]
 
 
 def test_read_json(sample_dir):
@@ -80,9 +81,7 @@ def test_read_json_sources(sample_dir):
 
 def test_json_roundtrip(cfg):
     """Test that a configuration can be recovered after being stored as JSON"""
-    roundtripped = Configuration.from_str(
-        cfg.as_str(format="json"), format="json"
-    )
+    roundtripped = Configuration.from_str(cfg.as_str(format="json"), format="json")
 
     assert roundtripped.as_dict() == cfg.as_dict()
 
@@ -95,6 +94,7 @@ def test_json_handle_int_key_gracefully(cfg_with_int_key):
 
     # JSON converts integer keys to strings
     assert roundtripped.answer.entry_keys == ["42"]
+    assert roundtripped.long_answer.parts.entry_keys == ["1", "2"]
 
 
 def test_read_toml(sample_dir):
@@ -112,9 +112,7 @@ def test_read_toml_sources(sample_dir):
 
 def test_toml_roundtrip(cfg):
     """Test that a configuration can be recovered after being stored as TOML"""
-    roundtripped = Configuration.from_str(
-        cfg.as_str(format="toml"), format="toml"
-    )
+    roundtripped = Configuration.from_str(cfg.as_str(format="toml"), format="toml")
 
     assert roundtripped.as_dict() == cfg.as_dict()
 
@@ -145,9 +143,7 @@ def test_read_yaml_sources(sample_dir):
 
 def test_yaml_roundtrip(cfg):
     """Test that a configuration can be recovered after being stored as YAML"""
-    roundtripped = Configuration.from_str(
-        cfg.as_str(format="yaml"), format="yaml"
-    )
+    roundtripped = Configuration.from_str(cfg.as_str(format="yaml"), format="yaml")
 
     assert roundtripped.as_dict() == cfg.as_dict()
 
