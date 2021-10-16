@@ -5,7 +5,7 @@ _Unified handling of configuration files in Python_
 [![Latest version](https://img.shields.io/pypi/v/pyconfs.svg)](https://pypi.org/project/pyconfs/)
 [![Python versions](https://img.shields.io/pypi/pyversions/pyconfs.svg)](https://pypi.org/project/pyconfs/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Interrogate DocStrings](https://github.com/gahjelle/pyconfs/blob/master/docs/images/interrogate_badge.svg)](https://interrogate.readthedocs.io/)
+[![Interrogate DocStrings](https://github.com/gahjelle/pyconfs/blob/main/docs/images/interrogate_badge.svg)](https://interrogate.readthedocs.io/)
 [![unit_tests](https://github.com/gahjelle/pyconfs/workflows/unit_tests/badge.svg)](https://github.com/gahjelle/pyconfs/actions)
 
 ## Installing PyConfs
