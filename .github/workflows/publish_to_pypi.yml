@@ -3,7 +3,8 @@ name: Publish to PyPI
 on:
   push:
     tags:
-      - v0.5.3(-[0-9]+)?
+      - v*
+  workflow_dispatch:
 
 jobs:
   publish:
@@ -14,7 +15,7 @@ jobs:
 
       - uses: actions/setup-python@v2
         with:
-          python-version: 3.9
+          python-version: "3.9"
 
       - name: "Installs dependencies"
         run: |
