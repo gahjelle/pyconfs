@@ -64,6 +64,9 @@ def test_ini_handle_int_key_gracefully(cfg_with_int_key):
     # INI converts integer keys to strings
     assert roundtripped.answer.entry_keys == ["42"]
 
+    # Subsections are not properly supported by INI reader
+    # assert roundtripped.long_answer.parts.entry_keys == ["1", "2"]
+
 
 def test_read_json(sample_dir):
     """Test that reading an JSON file succeeds"""
@@ -95,6 +98,7 @@ def test_json_handle_int_key_gracefully(cfg_with_int_key):
 
     # JSON converts integer keys to strings
     assert roundtripped.answer.entry_keys == ["42"]
+    assert roundtripped.long_answer.parts.entry_keys == ["1", "2"]
 
 
 def test_read_toml(sample_dir):
