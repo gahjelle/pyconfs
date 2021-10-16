@@ -42,7 +42,7 @@ def as_named_tuple(
     except TypeError as err:
         # Rewrite the error message if fields are missing
         name = f"Configuration {self.name!r}"
-        message = err.args[0].replace("__new__()", name).replace("<lambda>()", name)
+        message = re.sub(r"^[\w.]*(__new__|<lambda>)\(\)", name, err.args[0])
         field = (re.findall(r"'([^']+)'$", message) or ["__no_field_found__"]).pop()
         message += f" ({self._get_source_string(field, src_map.get(field))})"
         err.args = (message, *err.args[1:])
