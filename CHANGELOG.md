@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 
 - Changelog.
+- `.is_list` property identifying `ConfigurationList` objects ([#19])
+
 
 ## [0.5.3] - 2021-10-16
 
@@ -229,6 +231,7 @@ Initial commit.
 [0.1.1]: https://github.com/gahjelle/pyconfs/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/gahjelle/pyconfs/releases/tag/v0.1.0
 
+[#19]: https://github.com/gahjelle/pyconfs/pull/19
 [#18]: https://github.com/gahjelle/pyconfs/pull/18
 [#17]: https://github.com/gahjelle/pyconfs/pull/17
 [#16]: https://github.com/gahjelle/pyconfs/pull/16

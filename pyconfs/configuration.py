@@ -41,6 +41,11 @@ def _dispatch_to(converter):
 class IsConfiguration:
     """Mixin used to identify Configuration objects"""
 
+    @property
+    def is_list(self):
+        """Report on whether the Configuration object is a ConfigurationList"""
+        return isinstance(self, UserList)
+
 
 class Configuration(UserDict, IsConfiguration):
     """Consistent handling of configuration formats
