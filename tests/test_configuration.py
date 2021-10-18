@@ -59,3 +59,13 @@ def test_replace_notstring(cfg):
     """Test that replacing a non-string raises a proper error"""
     with pytest.raises(_exceptions.ConversionError):
         cfg.replace("number")
+
+
+def test_config_is_not_list(cfg):
+    """Test that Configuration does not identify as a list"""
+    assert not cfg.is_list
+
+
+def test_config_is_list(cfg):
+    """Test that ConfigurationList identifies as a list"""
+    assert cfg.dependencies.is_list
