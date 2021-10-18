@@ -19,7 +19,7 @@ from pyconfs.configuration import Configuration  # noqa
 # Version of PyConfs
 #
 # This is automatically set using the bumpversion tool
-__version__ = "0.5.3"
+__version__ = "0.5.4"
 
 
 # Homepage for PyConfs

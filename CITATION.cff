@@ -5,7 +5,7 @@ abstract: "Unified handling of configuration files in Python"
 authors:
   - family-names: "Hjelle"
     given-names: "Geir Arne"
-version: 0.5.3
+version: 0.5.4
 date-released: 2019-10-01
 repository-code: "https://github.com/gahjelle/pyconfs"
 license: MIT
