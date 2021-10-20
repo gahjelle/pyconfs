@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- `ConfigurationList` objects do not preserve variables
+
+
 ## [0.5.4] - 2021-10-18
 
 ### Added

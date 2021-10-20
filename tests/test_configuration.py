@@ -8,6 +8,7 @@ import pytest
 
 # PyConfs imports
 from pyconfs import _exceptions
+from pyconfs.configuration import ConfigurationList
 
 
 def test_replace(cfg):
@@ -58,7 +59,7 @@ def test_replace_list_key(cfg):
 def test_replace_notstring(cfg):
     """Test that replacing a non-string raises a proper error"""
     with pytest.raises(_exceptions.ConversionError):
-        cfg.replace("number")
+        cfg.stuff.replace("number")
 
 
 def test_config_is_not_list(cfg):
@@ -69,3 +70,28 @@ def test_config_is_not_list(cfg):
 def test_config_is_list(cfg):
     """Test that ConfigurationList identifies as a list"""
     assert cfg.dependencies.is_list
+
+
+def test_section_keeps_variables(cfg):
+    """Test that variables are preserved in configuration sections"""
+    assert cfg.files.vars == cfg.vars
+
+
+def test_configlist_keeps_variables(cfg):
+    """Test that variables are preserved in ConfigurationList objects"""
+    assert cfg.dependencies.vars == cfg.vars
+
+
+def test_configlist_elements_keep_variables(cfg):
+    """Test that variables are preserved in ConfigurationList elements"""
+    assert cfg.dependencies[0].vars == cfg.vars
+
+
+def test_plain_list_is_python_list(cfg):
+    """Test that plain lists are represented as Python lists"""
+    assert isinstance(cfg.stuff["400 m hurdles"], list)
+
+
+def test_nested_list_is_configlist(cfg):
+    """Test that nested lists are represented as ConfigurationList objects"""
+    assert isinstance(cfg.dependencies, ConfigurationList)

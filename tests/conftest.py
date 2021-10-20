@@ -10,7 +10,7 @@ import pyconfs
 @pytest.fixture
 def cfg():
     """A basic configuration for testing"""
-    return pyconfs.Configuration.from_dict(
+    cfg = pyconfs.Configuration.from_dict(
         {
             "name": "pyconfs",
             "dependencies": [
@@ -27,7 +27,9 @@ def cfg():
                 "toml-reader": "{basepath}/pyconfs/readers/toml.py",
                 "test": "{basepath}/tests/test_configuration.py",
             },
-            "number": 7,
+            "stuff": {"number": 7, "400 m hurdles": [45.94, 46.17, 46.72]},
         },
         name="test_config",
     )
+    cfg.vars.update({"color": "Black", "default_format": "toml"})
+    return cfg
