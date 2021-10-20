@@ -555,17 +555,20 @@ class ConfigurationList(UserList, IsConfiguration):
     def update_entry(self, value: Any, source: str = "") -> None:
         """Add one entry to the configuration list"""
         # Treat dicts as nested configurations
-        if isinstance(value, dict):
-            value = Configuration.from_dict(value, name=self.name, source=source)
-            source = value._source
+        if isinstance(value, (dict, UserDict)):
+            value_obj = Configuration(name=self.name, _vars=self.vars)
+            value_obj.update_from_dict(value, source=source)
 
         # Treat lists with nested elements as configuration lists
-        elif isinstance(value, list) and _is_nested(value):
-            value = ConfigurationList.from_list(value, name=self.name, source=source)
-            source = value._source
+        elif isinstance(value, (list, UserList)) and _is_nested(value):
+            value_obj = ConfigurationList(name=self.name, _vars=self.vars)
+            value_obj.update_from_list(value, source=source)
+
+        else:
+            value_obj = value
 
         # Add entry to configuration list
-        self.data.append(value)
+        self.data.append(value_obj)
         self._source.append(source)
 
     def update_from_list(self, entries: List[Any], source: str = "") -> None:
