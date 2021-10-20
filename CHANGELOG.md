@@ -26,7 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
-- Explicit support for Python 3.9 ([#13]).
+- Explicit support for Python 3.10 ([#13]).
 - [Citation file](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files) (by [@lewiuberg](https://github.com/lewiuberg/) in [#16]).
 - Use GitHub actions for CD ([#18]).
 
