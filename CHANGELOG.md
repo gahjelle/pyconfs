@@ -7,9 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.5.5] - 2021-10-20
+
 ### Fixed
 
-- `ConfigurationList` objects do not preserve variables
+- `ConfigurationList` objects do not preserve variables ([#20])
 
 
 ## [0.5.4] - 2021-10-18
@@ -218,7 +220,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 Initial commit.
 
-[Unreleased]: https://github.com/gahjelle/pyconfs/compare/v0.5.4...HEAD
+[Unreleased]: https://github.com/gahjelle/pyconfs/compare/v0.5.5...HEAD
+[0.5.5]: https://github.com/gahjelle/pyconfs/compare/v0.5.4-20211018...v0.5.5-20211020
 [0.5.4]: https://github.com/gahjelle/pyconfs/compare/v0.5.3-20211016...v0.5.4-20211018
 [0.5.3]: https://github.com/gahjelle/pyconfs/compare/v0.5.2-20210608...v0.5.3-20211016
 [0.5.2]: https://github.com/gahjelle/pyconfs/compare/v0.5.1-20201128...v0.5.2-20210608
@@ -239,6 +242,7 @@ Initial commit.
 [0.1.1]: https://github.com/gahjelle/pyconfs/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/gahjelle/pyconfs/releases/tag/v0.1.0
 
+[#20]: https://github.com/gahjelle/pyconfs/pull/20
 [#19]: https://github.com/gahjelle/pyconfs/pull/19
 [#18]: https://github.com/gahjelle/pyconfs/pull/18
 [#17]: https://github.com/gahjelle/pyconfs/pull/17
