@@ -10,7 +10,7 @@ import pyplugs
 from pyconfs._util import delayed_import
 
 try:
-    # Third party imports
+    # Standard library imports
     import tomllib as toml
 except ImportError:
     # Delayed imports
