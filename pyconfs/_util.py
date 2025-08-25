@@ -1,5 +1,4 @@
-"""Utility functions for pyconfs
-"""
+"""Utility functions for pyconfs"""
 
 # Standard library imports
 import importlib

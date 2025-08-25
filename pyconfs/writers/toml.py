@@ -1,6 +1,4 @@
-"""Writer for TOML-files
-
-"""
+"""Writer for TOML-files"""
 
 # Standard library imports
 from typing import Any, Dict

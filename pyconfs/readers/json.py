@@ -1,6 +1,4 @@
-"""Reader for JSON-files
-
-"""
+"""Reader for JSON-files"""
 
 # Standard library imports
 import json

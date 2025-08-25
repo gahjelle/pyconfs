@@ -4,12 +4,12 @@ build-backend = "flit_core.buildapi"
 
 
 [tool.flit.metadata]
-module             = "pyconfs"
-author             = "Geir Arne Hjelle"
-author-email       = "geirarne@gmail.com"
-home-page          = "https://github.com/gahjelle/pyconfs"
-description-file   = "README.md"
-classifiers        = [
+module = "pyconfs"
+author = "Geir Arne Hjelle"
+author-email = "geirarne@gmail.com"
+home-page = "https://github.com/gahjelle/pyconfs"
+description-file = "README.md"
+classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
@@ -22,32 +22,50 @@ classifiers        = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-keywords           = "configuration ini json toml yml"
+keywords = "configuration ini json toml yml"
 
 # Requirements
-requires-python    = ">=3.6"
-requires           = [
-    "importlib_resources; python_version < '3.7'",
-    "pyplugs",
-]
+requires-python = ">=3.6"
+requires = ["importlib_resources; python_version < '3.7'", "pyplugs"]
 
 
 [tool.flit.metadata.requires-extra]
-toml               = ["toml"]
-yaml               = ["PyYAML"]
-dev                = ["black", "bumpversion", "flake8", "flit", "interrogate", "isort", "mypy", "pre-commit"]
-doc                = ["mkdocs"]
-test               = ["black", "flake8", "interrogate", "isort", "mypy", "pytest", "pytest-cov", "tox"]
+toml = ["toml"]
+yaml = ["PyYAML"]
+dev = [
+    "black",
+    "bumpversion",
+    "flake8",
+    "flit",
+    "interrogate",
+    "isort",
+    "mypy",
+    "pre-commit",
+]
+doc = ["mkdocs"]
+test = [
+    "black",
+    "flake8",
+    "interrogate",
+    "isort",
+    "mypy",
+    "pytest",
+    "pytest-cov",
+    "tox",
+]
 
 
 [tool.isort]
-multi_line_output             = 3
-profile                       = "black"
-import_heading_stdlib         = "Standard library imports"
-import_heading_thirdparty     = "Third party imports"
-import_heading_firstparty     = "PyConfs imports"
+multi_line_output = 3
+profile = "black"
+import_heading_stdlib = "Standard library imports"
+import_heading_thirdparty = "Third party imports"
+import_heading_firstparty = "PyConfs imports"
 
 
 [tool.interrogate]

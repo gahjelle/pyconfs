@@ -1,6 +1,4 @@
-"""Reader for YAML-files
-
-"""
+"""Reader for YAML-files"""
 
 # Standard library imports
 from typing import Any, Dict
