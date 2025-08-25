@@ -1,31 +1,24 @@
 repos:
   - repo: https://github.com/psf/black
-    rev: 21.9b0
+    rev: 25.1.0
     hooks:
       - id: black
-        language_version: python3.7
 
-  - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.9.2
-    hooks:
-      - id: flake8
-        language: python_venv
-        additional_dependencies: ["flake8-comprehensions"]
 
   - repo: https://github.com/econchick/interrogate
-    rev: 1.5.0
+    rev: 1.7.0
     hooks:
       - id: interrogate
         args: [--quiet, --config=pyproject.toml]
 
   - repo: https://github.com/pre-commit/mirrors-isort
-    rev: v5.9.3
+    rev: v5.10.1
     hooks:
       - id: isort
-        language: python_venv
+        language: python
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.910-1
+    rev: v1.17.1
     hooks:
       - id: mypy
         exclude: ^tests/

@@ -1,6 +1,4 @@
-"""Reader for TOML-files
-
-"""
+"""Reader for TOML-files"""
 
 # Standard library imports
 from typing import Any, Dict
@@ -11,8 +9,12 @@ import pyplugs
 # PyConfs imports
 from pyconfs._util import delayed_import
 
-# Delayed imports
-toml = delayed_import("toml")
+try:
+    # Standard library imports
+    import tomllib as toml
+except ImportError:
+    # Delayed imports
+    toml = delayed_import("toml")
 
 
 @pyplugs.register

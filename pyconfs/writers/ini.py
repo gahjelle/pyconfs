@@ -1,7 +1,4 @@
-"""Writer for ini-files based on ConfigParser
-
-
-"""
+"""Writer for ini-files based on ConfigParser"""
 
 # Standard library imports
 import io

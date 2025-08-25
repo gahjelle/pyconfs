@@ -8,6 +8,8 @@ _Unified handling of configuration files in Python_
 [![Interrogate DocStrings](https://github.com/gahjelle/pyconfs/blob/main/docs/images/interrogate_badge.svg)](https://interrogate.readthedocs.io/)
 [![unit_tests](https://github.com/gahjelle/pyconfs/workflows/unit_tests/badge.svg)](https://github.com/gahjelle/pyconfs/actions)
 
+> **Note:** For new projects, use [Configaroo](https://github.com/gahjelle/configaroo) instead.
+
 ## Installing PyConfs
 
 PyConfs is available at [PyPI](https://pypi.org/project/pyconfs/). You can install it using Pip:

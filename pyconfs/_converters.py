@@ -1,7 +1,4 @@
-"""Functions that convert strings to other datatypes
-
-
-"""
+"""Functions that convert strings to other datatypes"""
 
 # Standard library imports
 import functools

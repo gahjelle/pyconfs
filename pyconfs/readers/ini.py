@@ -1,6 +1,4 @@
-"""Reader for ini-files based on ConfigParser
-
-"""
+"""Reader for ini-files based on ConfigParser"""
 
 # Standard library imports
 from configparser import ConfigParser

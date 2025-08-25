@@ -1,6 +1,4 @@
-"""Plugins for writing configuration file formats
-
-"""
+"""Plugins for writing configuration file formats"""
 
 # Standard library imports
 import pathlib
